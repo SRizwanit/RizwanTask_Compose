@@ -1,7 +1,6 @@
 package com.srizwan.task
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,7 +31,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -60,18 +58,11 @@ fun LoginScreen(
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var errorText by remember { mutableStateOf<String?>(null) }
 
-    val backgroundBrush = Brush.verticalGradient(
-        colors = if (dark) {
-            listOf(Color(0xFF06110A), Color(0xFF0C2214))
-        } else {
-            listOf(Color(0xFFF7FCF1), Color(0xFFC8E6C9))
-        }
-    )
-
+    // Same animated flower + firefly background (defined in Theme.kt)
+    RizwanBackground(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundBrush)
             .systemBarsPadding()
             .imePadding()
             .verticalScroll(rememberScrollState())
@@ -189,5 +180,6 @@ fun LoginScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+    }
     }
 }
