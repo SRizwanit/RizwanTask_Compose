@@ -1,4 +1,4 @@
-name: SunnyCare Android Release Build (Signed)
+name: Android Release Build (Signed)
 
 # FIX: এই workflow টা repo secrets এ রাখা keystore ব্যবহার করে একটা সাইনড
 # (signed) রিলিজ APK বানায় এবং GitHub Release এ আপলোড করে। এটা কাজ করার আগে
