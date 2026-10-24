@@ -1,8 +1,22 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+// ---- secrets: local.properties (local) or environment variables (CI) -------
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
+fun secret(name: String): String =
+    (localProps.getProperty(name) ?: System.getenv(name) ?: "").trim()
+
+fun String.asBuildConfig(): String =
+    "\"" + replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
 android {
     namespace = "com.srizwan.task"
@@ -15,6 +29,10 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         vectorDrawables.useSupportLibrary = true
+
+        buildConfigField("String", "SUPABASE_URL", secret("SUPABASE_URL").asBuildConfig())
+        buildConfigField("String", "SUPABASE_ANON_KEY", secret("SUPABASE_ANON_KEY").asBuildConfig())
+        buildConfigField("String", "ADMIN_PHONE", secret("ADMIN_PHONE").asBuildConfig())
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
