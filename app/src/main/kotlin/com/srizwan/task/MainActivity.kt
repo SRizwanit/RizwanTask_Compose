@@ -64,7 +64,7 @@ import kotlin.math.sin
 private const val BRAND_NAME = "RizwanTask"
 private const val START_DELAY_MS = 600L          // pause before typing starts
 private const val TYPE_DELAY_MS = 160L           // delay between each typed letter
-private const val WAIT_AFTER_TYPING_MS = 20_000L // 20 seconds after typing completes -> Login
+private const val WAIT_AFTER_TYPING_MS = 5_000L // 20 seconds after typing completes -> Login
 
 // ---------------------------------------------------------------------------
 // Activity
