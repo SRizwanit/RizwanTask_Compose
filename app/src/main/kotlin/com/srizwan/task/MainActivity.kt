@@ -34,10 +34,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.sin
@@ -64,7 +63,7 @@ import kotlin.math.sin
 private const val BRAND_NAME = "RizwanTask"
 private const val START_DELAY_MS = 600L          // pause before typing starts
 private const val TYPE_DELAY_MS = 160L           // delay between each typed letter
-private const val WAIT_AFTER_TYPING_MS = 5_000L // 20 seconds after typing completes -> Login
+private const val WAIT_AFTER_TYPING_MS = 20_000L // 20 seconds after typing completes -> Login
 
 // ---------------------------------------------------------------------------
 // Activity
@@ -83,22 +82,20 @@ class MainActivity : ComponentActivity() {
 }
 
 // ---------------------------------------------------------------------------
-// Root: Splash -> Login (Login.kt)
+// Root: Splash -> Login / Signup -> Task
 // ---------------------------------------------------------------------------
 @Composable
-fun AppRoot() {
-    // rememberSaveable keeps the state across rotation / process recreation
-    var showLogin by rememberSaveable { mutableStateOf(false) }
-
+fun AppRoot(vm: AuthViewModel = viewModel()) {
     Crossfade(
-        targetState = showLogin,
+        targetState = vm.screen,
         animationSpec = tween(durationMillis = 700),
         label = "root_crossfade"
-    ) { loginVisible ->
-        if (loginVisible) {
-            LoginScreen()
-        } else {
-            SplashScreen(onFinished = { showLogin = true })
+    ) { screen ->
+        when (screen) {
+            Screen.Splash -> SplashScreen(onFinished = { vm.onSplashFinished() })
+            Screen.Login -> LoginScreen(vm)
+            Screen.Signup -> SignupScreen(vm)
+            Screen.Task -> TaskScreen(vm)
         }
     }
 }

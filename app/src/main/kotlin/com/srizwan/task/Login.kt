@@ -1,185 +1,155 @@
 package com.srizwan.task
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Login screen. Opened automatically by MainActivity
- * 20 seconds after the "RizwanTask" typewriter animation finishes.
+ * Login with mobile number + PIN.
+ *  - new number  -> Signup opens automatically
+ *  - wrong / forgotten PIN -> custom dialog (WhatsApp admin)
  */
 @Composable
-fun LoginScreen(
-    onLogin: (email: String, password: String) -> Unit = { _, _ -> }
-) {
-    val dark = isSystemInDarkTheme()
+fun LoginScreen(vm: AuthViewModel) {
     val colors = MaterialTheme.colorScheme
+    val focus = LocalFocusManager.current
 
-    var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var passwordVisible by rememberSaveable { mutableStateOf(false) }
-    var errorText by remember { mutableStateOf<String?>(null) }
+    var phone by rememberSaveable { mutableStateOf(vm.lastPhone) }
+    var pin by rememberSaveable { mutableStateOf("") }
 
-    // Same animated flower + firefly background (defined in Theme.kt)
+    fun submit() {
+        focus.clearFocus()
+        vm.login(phone, pin)
+    }
+
     RizwanBackground(modifier = Modifier.fillMaxSize()) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .systemBarsPadding()
-            .imePadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Surface(
-            modifier = Modifier.size(104.dp),
-            shape = CircleShape,
-            color = colors.surface,
-            shadowElevation = 10.dp
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.rizwantask),
-                contentDescription = "RizwanTask logo",
-                modifier = Modifier.padding(16.dp),
-                contentScale = ContentScale.Fit
+            Spacer(modifier = Modifier.height(24.dp))
+
+            LogoBadge()
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = "স্বাগতম",
+                color = colors.onBackground,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
             )
-        }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "মোবাইল নাম্বার ও পিন দিয়ে লগইন করুন",
+                color = colors.onSurfaceVariant,
+                fontSize = 15.sp,
+                textAlign = TextAlign.Center
+            )
 
-        Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-        Text(
-            text = "Welcome back",
-            color = colors.onBackground,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "Sign in to continue to RizwanTask",
-            color = colors.onSurfaceVariant,
-            fontSize = 15.sp,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(28.dp))
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            color = colors.surface.copy(alpha = if (dark) 0.9f else 0.95f),
-            shadowElevation = 8.dp
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                OutlinedTextField(
-                    value = email,
+            AuthCard {
+                AuthField(
+                    value = phone,
                     onValueChange = {
-                        email = it
-                        errorText = null
+                        phone = it.filter(Char::isDigit).take(PHONE_LENGTH)
+                        vm.clearMessage()
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Email") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+                    label = "মোবাইল নাম্বার",
+                    keyboardType = KeyboardType.Phone,
+                    enabled = !vm.loading
                 )
 
-                OutlinedTextField(
-                    value = password,
+                AuthField(
+                    value = pin,
                     onValueChange = {
-                        password = it
-                        errorText = null
+                        pin = it.filter(Char::isDigit).take(PIN_LENGTH)
+                        vm.clearMessage()
                     },
+                    label = "পিন ($PIN_LENGTH ডিজিট)",
+                    keyboardType = KeyboardType.NumberPassword,
+                    imeAction = ImeAction.Done,
+                    isPassword = true,
+                    enabled = !vm.loading,
+                    onDone = { submit() }
+                )
+
+                vm.message?.let { ErrorText(it) }
+
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Password") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                    visualTransformation = if (passwordVisible) {
-                        VisualTransformation.None
-                    } else {
-                        PasswordVisualTransformation()
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    trailingIcon = {
-                        TextButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Text(if (passwordVisible) "Hide" else "Show")
-                        }
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = { vm.showForgotPin(phone) }) {
+                        Text("পিন ভুলে গেছেন?")
                     }
-                )
-
-                if (errorText != null) {
-                    Text(
-                        text = errorText.orEmpty(),
-                        color = Color(0xFFD32F2F),
-                        fontSize = 13.sp
-                    )
                 }
 
-                Button(
-                    onClick = {
-                        when {
-                            email.isBlank() || !email.contains("@") ->
-                                errorText = "Please enter a valid email address."
-                            password.length < 6 ->
-                                errorText = "Password must be at least 6 characters."
-                            else -> onLogin(email.trim(), password)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(14.dp)
+                PrimaryButton(
+                    text = "লগইন",
+                    loading = vm.loading,
+                    onClick = { submit() }
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "Login", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = "নতুন ইউজার?",
+                        color = colors.onSurfaceVariant,
+                        fontSize = 14.sp
+                    )
+                    TextButton(onClick = { vm.openSignup(phone) }) {
+                        Text("একাউন্ট খুলুন", fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+        }
     }
+
+    vm.helpDialog?.let { state ->
+        AdminHelpDialog(
+            state = state,
+            userPhone = phone,
+            onDismiss = { vm.dismissHelp() }
+        )
     }
 }
