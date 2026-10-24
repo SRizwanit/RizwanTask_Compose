@@ -1,10 +1,5 @@
 package com.srizwan.task
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -15,7 +10,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -108,15 +106,19 @@ fun RizwanBackground(
     flowers: Boolean = true,
     content: @Composable BoxScope.() -> Unit = {}
 ) {
-    // One looping clock (0..1 every 24 seconds). Every motion below uses whole
-    // multiples of it, so the loop is seamless.
-    val infinite = rememberInfiniteTransition(label = "rizwan_background")
-    val time = infinite.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(24_000, easing = LinearEasing)),
-        label = "time"
-    )
+    // One looping clock (0..1 every LOOP_SECONDS). It is driven by the screen's
+    // frame clock, so it keeps running even when the phone's "animator duration
+    // scale" is off or battery saver shortens system animations.
+    // Every motion below uses whole multiples of this clock, so the loop is seamless.
+    val time = remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val start = withFrameNanos { it }
+        while (true) {
+            withFrameNanos { now ->
+                time.floatValue = ((now - start) % LOOP_NANOS) / LOOP_NANOS.toFloat()
+            }
+        }
+    }
 
     val gradient = remember(darkTheme) {
         Brush.verticalGradient(
@@ -132,7 +134,7 @@ fun RizwanBackground(
 
     Box(modifier = modifier.background(gradient)) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val t = time.value
+            val t = time.floatValue
             drawDust(t, palette)
             if (flowers) drawFlowers(t, palette)
             if (scrim) {
@@ -246,15 +248,15 @@ private val BgFireflies: List<BgFirefly> = run {
         BgFirefly(
             x = random.nextFloat(),
             y = random.nextFloat(),
-            ampX = 0.02f + random.nextFloat() * 0.07f,
-            ampY = 0.02f + random.nextFloat() * 0.06f,
+            ampX = 0.04f + random.nextFloat() * 0.10f,
+            ampY = 0.04f + random.nextFloat() * 0.09f,
             freqX = 1 + random.nextInt(3),
-            freqY = 1 + random.nextInt(4),
+            freqY = 2 + random.nextInt(4),
             phaseX = random.nextFloat(),
             phaseY = random.nextFloat(),
-            blinkFreq = 3 + random.nextInt(6),
+            blinkFreq = 4 + random.nextInt(7),
             blinkPhase = random.nextFloat(),
-            size = 0.8f + random.nextFloat() * 1.6f
+            size = 1.6f + random.nextFloat() * 1.8f
         )
     }
 }
@@ -265,12 +267,15 @@ private val BgDusts: List<BgDust> = run {
         BgDust(
             x = random.nextFloat(),
             y = random.nextFloat(),
-            size = 0.5f + random.nextFloat() * 1.1f,
-            freq = 2 + random.nextInt(7),
+            size = 0.8f + random.nextFloat() * 1.4f,
+            freq = 3 + random.nextInt(8),
             phase = random.nextFloat()
         )
     }
 }
+
+private const val LOOP_SECONDS = 12L
+private const val LOOP_NANOS = LOOP_SECONDS * 1_000_000_000L
 
 private const val TWO_PI = (2.0 * PI).toFloat()
 
@@ -282,7 +287,7 @@ private const val TWO_PI = (2.0 * PI).toFloat()
 private fun DrawScope.drawDust(t: Float, palette: GardenPalette) {
     BgDusts.forEach { d ->
         val s = sin(TWO_PI * (t * d.freq + d.phase)) * 0.5f + 0.5f
-        val a = s * s * 0.85f
+        val a = s * s
         if (a > 0.04f) {
             drawCircle(
                 color = palette.dust.copy(alpha = a),
@@ -326,7 +331,7 @@ private fun DrawScope.drawFlowers(t: Float, palette: GardenPalette) {
                 c.x + (cos(angle) * dist).toFloat(),
                 c.y + (sin(angle) * dist).toFloat()
             )
-            val s = sin(TWO_PI * (t * 3f + f.phase + k * 0.5f)) * 0.5f + 0.5f
+            val s = sin(TWO_PI * (t * 5f + f.phase + k * 0.5f)) * 0.5f + 0.5f
             val a = s * s * s
             if (a > 0.05f) {
                 val rad = 0.7.dp.toPx() + 1.1.dp.toPx() * a
