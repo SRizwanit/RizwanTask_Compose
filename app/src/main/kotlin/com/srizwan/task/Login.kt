@@ -7,13 +7,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,8 +38,12 @@ fun LoginScreen(vm: AuthViewModel) {
     val colors = MaterialTheme.colorScheme
     val focus = LocalFocusManager.current
 
-    var phone by rememberSaveable { mutableStateOf(vm.lastPhone) }
+    // if this phone already has an account, only that number can log in here
+    val lockedPhone = vm.boundPhone
+
+    var typedPhone by rememberSaveable { mutableStateOf(vm.lastPhone) }
     var pin by rememberSaveable { mutableStateOf("") }
+    val phone = lockedPhone ?: typedPhone
 
     fun submit() {
         focus.clearFocus()
@@ -52,8 +54,8 @@ fun LoginScreen(vm: AuthViewModel) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .systemBarsPadding()
-                .imePadding()
+                // status bar + navigation bar + keyboard in one - nothing gets cut
+                .safeDrawingPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -86,13 +88,22 @@ fun LoginScreen(vm: AuthViewModel) {
                 AuthField(
                     value = phone,
                     onValueChange = {
-                        phone = it.filter(Char::isDigit).take(PHONE_LENGTH)
+                        typedPhone = it.filter(Char::isDigit).take(PHONE_LENGTH)
                         vm.clearMessage()
                     },
                     label = "মোবাইল নাম্বার",
                     keyboardType = KeyboardType.Phone,
-                    enabled = !vm.loading
+                    enabled = !vm.loading,
+                    readOnly = lockedPhone != null
                 )
+
+                if (lockedPhone != null) {
+                    Text(
+                        text = "এই মোবাইলে শুধু এই নাম্বারের একাউন্টেই লগইন করা যাবে।",
+                        color = colors.onSurfaceVariant,
+                        fontSize = 12.sp
+                    )
+                }
 
                 AuthField(
                     value = pin,
@@ -125,18 +136,21 @@ fun LoginScreen(vm: AuthViewModel) {
                     onClick = { submit() }
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "নতুন ইউজার?",
-                        color = colors.onSurfaceVariant,
-                        fontSize = 14.sp
-                    )
-                    TextButton(onClick = { vm.openSignup(phone) }) {
-                        Text("একাউন্ট খুলুন", fontWeight = FontWeight.SemiBold)
+                // a phone that already has an account can not open another one
+                if (lockedPhone == null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "নতুন ইউজার?",
+                            color = colors.onSurfaceVariant,
+                            fontSize = 14.sp
+                        )
+                        TextButton(onClick = { vm.openSignup(phone, pin) }) {
+                            Text("একাউন্ট খুলুন", fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }

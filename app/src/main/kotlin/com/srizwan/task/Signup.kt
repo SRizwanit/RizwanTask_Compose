@@ -8,16 +8,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,7 +34,9 @@ import androidx.compose.ui.unit.sp
 
 /**
  * New account form:
- * name, address, bKash / Nagad number, mobile number, PIN.
+ * name, address, bKash / Nagad number, mobile number.
+ * There is NO PIN here - the PIN is asked only on the Login page, and the PIN
+ * typed there is used for the new account (see AuthViewModel.openSignup).
  * After success the Task page opens.
  */
 @Composable
@@ -49,22 +49,20 @@ fun SignupScreen(vm: AuthViewModel) {
     var payMethod by rememberSaveable { mutableStateOf("bkash") }
     var payNumber by rememberSaveable { mutableStateOf("") }
     var phone by rememberSaveable { mutableStateOf(vm.lastPhone) }
-    var pin by rememberSaveable { mutableStateOf("") }
-    var confirmPin by rememberSaveable { mutableStateOf("") }
 
     BackHandler { vm.openLogin() }
 
     fun submit() {
         focus.clearFocus()
-        vm.signup(fullName, address, payMethod, payNumber, phone, pin, confirmPin)
+        vm.signup(fullName, address, payMethod, payNumber, phone)
     }
 
     RizwanBackground(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .systemBarsPadding()
-                .imePadding()
+                // status bar + navigation bar + keyboard in one - nothing gets cut
+                .safeDrawingPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -169,31 +167,7 @@ fun SignupScreen(vm: AuthViewModel) {
                     },
                     label = "মোবাইল নাম্বার (লগইনের জন্য)",
                     keyboardType = KeyboardType.Phone,
-                    enabled = !vm.loading
-                )
-
-                AuthField(
-                    value = pin,
-                    onValueChange = {
-                        pin = it.filter(Char::isDigit).take(PIN_LENGTH)
-                        vm.clearMessage()
-                    },
-                    label = "পিন ($PIN_LENGTH ডিজিট)",
-                    keyboardType = KeyboardType.NumberPassword,
-                    isPassword = true,
-                    enabled = !vm.loading
-                )
-
-                AuthField(
-                    value = confirmPin,
-                    onValueChange = {
-                        confirmPin = it.filter(Char::isDigit).take(PIN_LENGTH)
-                        vm.clearMessage()
-                    },
-                    label = "পিন আবার লিখুন",
-                    keyboardType = KeyboardType.NumberPassword,
                     imeAction = ImeAction.Done,
-                    isPassword = true,
                     enabled = !vm.loading,
                     onDone = { submit() }
                 )

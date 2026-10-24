@@ -18,7 +18,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,7 +34,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -89,6 +87,7 @@ fun AuthField(
     imeAction: ImeAction = ImeAction.Next,
     isPassword: Boolean = false,
     enabled: Boolean = true,
+    readOnly: Boolean = false,
     onDone: (() -> Unit)? = null
 ) {
     val focus = LocalFocusManager.current
@@ -107,13 +106,15 @@ fun AuthField(
         onValueChange = onValueChange,
         modifier = modifier.fillMaxWidth(),
         enabled = enabled,
+        readOnly = readOnly,
         label = { Text(label) },
         singleLine = true,
         shape = RoundedCornerShape(14.dp),
+        // typed text also gets the right font (Bangla / English / Arabic) - see AppFont.kt
         visualTransformation = if (isPassword && !visible) {
             PasswordVisualTransformation()
         } else {
-            VisualTransformation.None
+            AppFontTransformation
         },
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
         keyboardActions = KeyboardActions(

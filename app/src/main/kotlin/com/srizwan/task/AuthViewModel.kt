@@ -17,6 +17,18 @@ private val PHONE_REGEX = Regex("^01[3-9][0-9]{8}$")
 fun isValidPhone(value: String) = PHONE_REGEX.matches(value)
 fun isValidPin(value: String) = value.length == PIN_LENGTH && value.all { it in '0'..'9' }
 
+/** "+8801712345678" / "8801712345678" / "1712345678" -> "01712345678" */
+fun normalizePhone(value: String): String {
+    val digits = value.filter { it in '0'..'9' }
+    return when {
+        digits.length == 13 && digits.startsWith("880") -> "0" + digits.drop(3)
+        digits.length == 10 && !digits.startsWith("0") -> "0$digits"
+        else -> digits
+    }
+}
+
+fun samePhone(a: String, b: String) = normalizePhone(a) == normalizePhone(b)
+
 enum class Screen { Splash, Login, Signup, Task }
 
 enum class HelpReason { WrongPin, ForgotPin, Locked, Blocked, DeviceMismatch, DeviceInUse }
@@ -45,8 +57,15 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         private set
     var signupNotice by mutableStateOf<String?>(null)
         private set
-    var lastPhone by mutableStateOf("")
+    var lastPhone by mutableStateOf(store.boundPhone().orEmpty())
         private set
+
+    /** The only number that may log in on this phone (null = nobody yet). */
+    var boundPhone by mutableStateOf(store.boundPhone())
+        private set
+
+    /** PIN typed on the Login page. Signup does not ask for a PIN, it uses this one. Kept in memory only. */
+    private var pendingPin: String? = null
 
     private var sessionValid: Boolean? = null   // null = still checking
     private var splashDone = false
@@ -67,6 +86,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             when (val result = SupabaseApi.checkSession(token, androidId)) {
                 is ApiResult.Success -> {
                     store.save(result.user, token)
+                    boundPhone = store.boundPhone()
                     user = result.user
                     sessionValid = true
                 }
@@ -100,16 +120,27 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- navigation ---------------------------------------------------------
 
-    fun openSignup(phone: String = "") {
+    /** Login page -> "একাউন্ট খুলুন". The number and PIN typed on Login are used for the new account. */
+    fun openSignup(phone: String, pin: String) {
         message = null
-        signupNotice = null
-        if (phone.isNotBlank()) lastPhone = phone
+        if (boundPhone != null) {
+            helpDialog = HelpDialogState(HelpReason.DeviceInUse)
+            return
+        }
+        if (!isValidPhone(phone) || !isValidPin(pin)) {
+            message = "একাউন্ট খুলতে আগে মোবাইল নাম্বার ও $PIN_LENGTH ডিজিটের পিন দিন।"
+            return
+        }
+        lastPhone = phone
+        pendingPin = pin
+        signupNotice = "আপনার দেওয়া মোবাইল নাম্বার ও পিন দিয়েই একাউন্ট খোলা হবে। নিচের তথ্যগুলো পূরণ করুন।"
         screen = Screen.Signup
     }
 
     fun openLogin() {
         message = null
         signupNotice = null
+        pendingPin = null
         screen = Screen.Login
     }
 
@@ -140,6 +171,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
+        // one phone = one account: a different number can not log in here
+        val bound = boundPhone
+        if (bound != null && !samePhone(bound, phone)) {
+            helpDialog = HelpDialogState(HelpReason.DeviceInUse)
+            return
+        }
+
+        pendingPin = pin
         loading = true
         viewModelScope.launch {
             val result = SupabaseApi.login(phone, pin, androidId)
@@ -150,26 +189,33 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- signup ---------------------------------------------------------------
 
+    /** No PIN here: the PIN typed on the Login page is used (see [openSignup]). */
     fun signup(
         fullName: String,
         address: String,
         payMethod: String,
         payNumber: String,
-        phone: String,
-        pin: String,
-        confirmPin: String
+        phone: String
     ) {
         if (loading) return
         message = null
         lastPhone = phone
 
+        if (boundPhone != null) {
+            helpDialog = HelpDialogState(HelpReason.DeviceInUse)
+            return
+        }
+
         if (fullName.trim().length < 2) return fail(AuthError.INVALID_NAME)
         if (address.trim().length < 3) return fail(AuthError.INVALID_ADDRESS)
         if (!isValidPhone(payNumber)) return fail(AuthError.INVALID_PAY_NUMBER)
         if (!isValidPhone(phone)) return fail(AuthError.INVALID_PHONE)
-        if (!isValidPin(pin)) return fail(AuthError.INVALID_PIN)
-        if (pin != confirmPin) {
-            message = "পিন দুটি মিলছে না।"
+
+        val pin = pendingPin
+        if (pin == null || !isValidPin(pin)) {
+            // PIN is gone (e.g. app restarted) -> ask for it on the Login page
+            openLogin()
+            message = "পিন লগইন পেজে দিতে হয়। মোবাইল নাম্বার ও পিন দিয়ে আবার চেষ্টা করুন।"
             return
         }
         if (androidId.isBlank()) {
@@ -197,9 +243,11 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         val token = store.token()
-        store.clear()
+        store.clear()          // session only - the device binding stays
+        lastPhone = store.boundPhone() ?: user?.phone.orEmpty()
         user = null
         message = null
+        pendingPin = null
         if (token != null) {
             viewModelScope.launch { SupabaseApi.logout(token) }
         }
@@ -221,17 +269,25 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     return
                 }
                 store.save(result.user, token)
+                boundPhone = store.boundPhone()
                 user = result.user
                 message = null
                 signupNotice = null
+                pendingPin = null
                 screen = Screen.Task
             }
 
             is ApiResult.Failure -> when (result.error) {
                 // new user -> open Signup with the typed number
                 AuthError.USER_NOT_FOUND -> {
+                    // the bound account was deleted on the server -> free this phone
+                    val bound = boundPhone
+                    if (bound != null && samePhone(bound, lastPhone)) {
+                        store.unbindPhone()
+                        boundPhone = null
+                    }
                     message = null
-                    signupNotice = "এই নাম্বারে কোনো একাউন্ট নেই। নিচের ফর্ম পূরণ করে নতুন একাউন্ট খুলুন।"
+                    signupNotice = "এই নাম্বারে কোনো একাউন্ট নেই। লগইন পেজে দেওয়া নাম্বার ও পিন দিয়েই নতুন একাউন্ট খোলা হবে, নিচের তথ্যগুলো পূরণ করুন।"
                     screen = Screen.Signup
                 }
                 AuthError.WRONG_PIN ->
