@@ -159,6 +159,14 @@ object AppFontTransformation : VisualTransformation {
         TransformedText(text.withAppFonts(), OffsetMapping.Identity)
 }
 
+/**
+ * সত্যিই নিজে বসানো ফন্ট কি না।
+ * Material3-এর ডিফল্ট Typography-র প্রতিটা স্টাইলে FontFamily.SansSerif বসানো থাকে (null নয়),
+ * তাই `style.fontFamily != null` দিয়ে "নিজে দেওয়া" ধরা যায় না - SansSerif/Default বাদ দিতে হয়।
+ */
+private fun FontFamily?.isCustom(): Boolean =
+    this != null && this !== FontFamily.SansSerif && this !== FontFamily.Default
+
 // ---------------------------------------------------------------------------
 // Drop-in replacement for material3 Text
 // ---------------------------------------------------------------------------
@@ -183,7 +191,8 @@ fun Text(
     style: TextStyle = LocalTextStyle.current
 ) {
     // caller chose a font on purpose -> respect it
-    if (fontFamily != null || style.fontFamily != null) {
+    // (Material-এর ডিফল্ট SansSerif "নিজে দেওয়া" নয়, তাই isCustom() ব্যবহার)
+    if (fontFamily != null || style.fontFamily.isCustom()) {
         androidx.compose.material3.Text(
             text = text,
             modifier = modifier,
@@ -274,7 +283,7 @@ fun Text(
     onTextLayout: (TextLayoutResult) -> Unit = {},
     style: TextStyle = LocalTextStyle.current
 ) {
-    val skip = fontFamily != null || style.fontFamily != null
+    val skip = fontFamily != null || style.fontFamily.isCustom()
     val shown = if (skip) text else remember(text) { text.withAppFonts() }
 
     androidx.compose.material3.Text(
