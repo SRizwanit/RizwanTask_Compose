@@ -241,6 +241,24 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---- logout ---------------------------------------------------------------
 
+    /** The server rejected the token (blocked, device reset, session deleted) -> back to Login. */
+    fun onSessionExpired() {
+        if (screen != Screen.Task) return
+        store.clear()
+        lastPhone = store.boundPhone() ?: user?.phone.orEmpty()
+        user = null
+        pendingPin = null
+        message = AuthError.INVALID_SESSION.text()
+        screen = Screen.Login
+    }
+
+    /** Server sent a newer copy of the user (e.g. after a profile edit). */
+    fun updateUser(updated: AppUser) {
+        val token = store.token() ?: return
+        store.save(updated, token)
+        user = updated
+    }
+
     fun logout() {
         val token = store.token()
         store.clear()          // session only - the device binding stays
@@ -315,6 +333,7 @@ fun AuthError.text(): String = when (this) {
     AuthError.PHONE_EXISTS -> "এই নাম্বারে আগেই একাউন্ট আছে, লগইন করুন।"
     AuthError.NETWORK -> "ইন্টারনেট সংযোগ পাওয়া যায়নি। সংযোগ দেখে আবার চেষ্টা করুন।"
     AuthError.NOT_CONFIGURED -> "Supabase সেটআপ করা নেই। local.properties ফাইলে SUPABASE_URL ও SUPABASE_ANON_KEY দিন।"
+    AuthError.SERVER_SETUP -> "সার্ভারে SQL চালানো হয়নি। Supabase SQL Editor-এ supabase/compose_step1_auth_task.sql চালান।"
     AuthError.INVALID_SESSION -> "সেশন শেষ হয়েছে, আবার লগইন করুন।"
     else -> "কিছু একটা সমস্যা হয়েছে, আবার চেষ্টা করুন।"
 }

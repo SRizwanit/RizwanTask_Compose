@@ -3,6 +3,7 @@ package com.srizwan.task
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -14,7 +15,6 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -71,10 +72,23 @@ private const val WAIT_AFTER_TYPING_MS = 2_000L // 20 seconds after typing compl
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppTheme.init(this)
         enableEdgeToEdge()
         setContent {
             // Theme + colors live in Theme.kt
-            RizwanTaskTheme {
+            val dark = appDarkTheme()
+            // status / navigation bar icons follow the chosen day / night mode
+            DisposableEffect(dark) {
+                val transparent = android.graphics.Color.TRANSPARENT
+                enableEdgeToEdge(
+                    statusBarStyle = if (dark) SystemBarStyle.dark(transparent)
+                    else SystemBarStyle.light(transparent, transparent),
+                    navigationBarStyle = if (dark) SystemBarStyle.dark(transparent)
+                    else SystemBarStyle.light(transparent, transparent)
+                )
+                onDispose { }
+            }
+            RizwanTaskTheme(darkTheme = dark) {
                 AppRoot()
             }
         }
@@ -105,7 +119,7 @@ fun AppRoot(vm: AuthViewModel = viewModel()) {
 // ---------------------------------------------------------------------------
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
-    val dark = isSystemInDarkTheme()
+    val dark = LocalAppDark.current
     val colors = MaterialTheme.colorScheme
     val currentOnFinished by rememberUpdatedState(onFinished)
 

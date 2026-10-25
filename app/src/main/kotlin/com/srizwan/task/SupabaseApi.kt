@@ -41,8 +41,14 @@ data class AppUser(
     val address: String,
     val phone: String,
     val payMethod: String,   // "bkash" or "nagad"
-    val payNumber: String
+    val payNumber: String,
+    val createdAt: String = "",      // ISO time, used to hide notices older than the account
+    val isAdminFlag: Boolean = false // sent by the server (admin phone)
 ) {
+    /** Admin = server says so, or the number equals ADMIN_PHONE from local.properties. */
+    val isAdmin: Boolean
+        get() = isAdminFlag || (phone.isNotBlank() && samePhone(phone, AppConfig.adminPhone))
+
     fun toJson(): JSONObject = JSONObject()
         .put("id", id)
         .put("full_name", fullName)
@@ -50,6 +56,8 @@ data class AppUser(
         .put("phone", phone)
         .put("pay_method", payMethod)
         .put("pay_number", payNumber)
+        .put("created_at", createdAt)
+        .put("is_admin", isAdminFlag)
 
     companion object {
         fun fromJson(j: JSONObject) = AppUser(
@@ -58,7 +66,9 @@ data class AppUser(
             address = j.optString("address"),
             phone = j.optString("phone"),
             payMethod = j.optString("pay_method"),
-            payNumber = j.optString("pay_number")
+            payNumber = j.optString("pay_number"),
+            createdAt = j.optString("created_at"),
+            isAdminFlag = j.optBoolean("is_admin", false)
         )
     }
 }
@@ -67,7 +77,7 @@ enum class AuthError {
     INVALID_PHONE, INVALID_PIN, INVALID_NAME, INVALID_ADDRESS, INVALID_PAY_NUMBER,
     USER_NOT_FOUND, WRONG_PIN, LOCKED, BLOCKED,
     DEVICE_MISMATCH, DEVICE_IN_USE, PHONE_EXISTS, INVALID_SESSION,
-    NETWORK, NOT_CONFIGURED, UNKNOWN
+    NETWORK, NOT_CONFIGURED, SERVER_SETUP, UNKNOWN
 }
 
 sealed interface ApiResult {
@@ -75,6 +85,12 @@ sealed interface ApiResult {
 
     /** [extra]: WRONG_PIN -> attempts left, LOCKED -> seconds left */
     data class Failure(val error: AuthError, val extra: Int = 0) : ApiResult
+}
+
+/** Result of [SupabaseApi.call]. [Fail.error] = "network", "not_configured", "unknown" or a server code. */
+sealed interface CallResult {
+    data class Ok(val json: JSONObject) : CallResult
+    data class Fail(val error: String, val value: Double = 0.0) : CallResult
 }
 
 // ---------------------------------------------------------------------------
@@ -124,12 +140,50 @@ object SupabaseApi {
         rpc("logout_user", JSONObject().put("p_token", token))
     }
 
+    /**
+     * Generic RPC for the Task / Profile / Admin pages (everything except login & signup).
+     * The server answers {ok:true, ...} or {ok:false, error:"...", value:n}.
+     */
+    suspend fun call(function: String, body: JSONObject = JSONObject()): CallResult =
+        when (val raw = post(function, body)) {
+            is Raw.Error -> CallResult.Fail(
+                when (raw.error) {
+                    AuthError.NETWORK -> "network"
+                    AuthError.NOT_CONFIGURED -> "not_configured"
+                    AuthError.SERVER_SETUP -> "setup_missing"
+                    else -> "unknown"
+                }
+            )
+            is Raw.Body -> try {
+                val json = JSONObject(raw.text)
+                if (json.optBoolean("ok", false)) CallResult.Ok(json)
+                else CallResult.Fail(json.optString("error", "unknown"), json.optDouble("value", 0.0))
+            } catch (e: JSONException) {
+                CallResult.Fail("unknown")
+            }
+        }
+
     // ---- internals --------------------------------------------------------
 
+    private sealed interface Raw {
+        data class Body(val text: String) : Raw
+        data class Error(val error: AuthError) : Raw
+    }
+
     private suspend fun rpc(function: String, body: JSONObject): ApiResult =
+        when (val raw = post(function, body)) {
+            is Raw.Error -> ApiResult.Failure(raw.error)
+            is Raw.Body -> try {
+                parse(JSONObject(raw.text))
+            } catch (e: JSONException) {
+                ApiResult.Failure(AuthError.UNKNOWN)
+            }
+        }
+
+    private suspend fun post(function: String, body: JSONObject): Raw =
         withContext(Dispatchers.IO) {
             if (AppConfig.supabaseUrl.isBlank() || AppConfig.anonKey.isBlank()) {
-                return@withContext ApiResult.Failure(AuthError.NOT_CONFIGURED)
+                return@withContext Raw.Error(AuthError.NOT_CONFIGURED)
             }
 
             var connection: HttpURLConnection? = null
@@ -138,7 +192,7 @@ object SupabaseApi {
                     .openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"
                     connectTimeout = 15_000
-                    readTimeout = 20_000
+                    readTimeout = 25_000
                     doOutput = true
                     setRequestProperty("apikey", AppConfig.anonKey)
                     // legacy anon keys are JWTs (start with "eyJ"); new publishable
@@ -156,14 +210,16 @@ object SupabaseApi {
                 val stream = if (code in 200..299) connection.inputStream else connection.errorStream
                 val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
 
-                if (code !in 200..299) {
-                    return@withContext ApiResult.Failure(AuthError.UNKNOWN)
+                if (code == 404) {
+                    // PostgREST: function not found -> the SQL file was not run in Supabase yet
+                    return@withContext Raw.Error(AuthError.SERVER_SETUP)
                 }
-                parse(JSONObject(text))
+                if (code !in 200..299) {
+                    return@withContext Raw.Error(AuthError.UNKNOWN)
+                }
+                Raw.Body(text)
             } catch (e: IOException) {
-                ApiResult.Failure(AuthError.NETWORK)
-            } catch (e: JSONException) {
-                ApiResult.Failure(AuthError.UNKNOWN)
+                Raw.Error(AuthError.NETWORK)
             } finally {
                 connection?.disconnect()
             }

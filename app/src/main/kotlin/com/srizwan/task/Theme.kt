@@ -9,7 +9,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -83,15 +89,63 @@ private val DarkColors = darkColorScheme(
     outline = Color(0xFF4F7A56)
 )
 
+/** Day / night choice: Auto = follow the phone, Light, Dark (same 3 modes as the web app). */
+enum class ThemeMode(val label: String, val icon: String) {
+    Auto("সিস্টেম অনুযায়ী", "🌗"),
+    Light("লাইট মোড", "☀️"),
+    Dark("ডার্ক মোড", "🌙");
+
+    fun next(): ThemeMode = when (this) {
+        Auto -> Light
+        Light -> Dark
+        Dark -> Auto
+    }
+}
+
+/** Saved on the phone. Call AppTheme.init(context) once in MainActivity.onCreate. */
+object AppTheme {
+    private const val PREFS = "rizwantask_theme"
+    private const val KEY = "mode"
+
+    var mode by mutableStateOf(ThemeMode.Auto)
+        private set
+
+    fun init(context: Context) {
+        val saved = context.applicationContext
+            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY, null)
+        mode = ThemeMode.entries.firstOrNull { it.name == saved } ?: ThemeMode.Auto
+    }
+
+    fun set(context: Context, value: ThemeMode) {
+        mode = value
+        context.applicationContext
+            .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(KEY, value.name).apply()
+    }
+}
+
+/** true when the app is in night mode (follows the AppTheme switch). */
+val LocalAppDark = staticCompositionLocalOf { false }
+
+@Composable
+fun appDarkTheme(): Boolean = when (AppTheme.mode) {
+    ThemeMode.Auto -> isSystemInDarkTheme()
+    ThemeMode.Light -> false
+    ThemeMode.Dark -> true
+}
+
 @Composable
 fun RizwanTaskTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = appDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
-        content = content
-    )
+    CompositionLocalProvider(LocalAppDark provides darkTheme) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkColors else LightColors,
+            content = content
+        )
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -100,7 +154,7 @@ fun RizwanTaskTheme(
 @Composable
 fun RizwanBackground(
     modifier: Modifier = Modifier,
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = LocalAppDark.current,
     scrim: Boolean = false,
     fireflies: Boolean = true,
     flowers: Boolean = true,
