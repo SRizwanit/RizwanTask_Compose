@@ -137,7 +137,8 @@ fun AppField(
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val textStyle = if (pin) {
-        TextStyle(fontFamily = AnekBangla, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = 13.2.sp, color = cs.onSurface)
+        TextStyle(fontFamily = AnekBangla, fontSize = 22.sp, fontWeight = FontWeight.Bold, letterSpacing = 13.2.sp, color = cs.onSurface,
+                  textAlign = TextAlign.Center)
     } else {
         TextStyle(fontFamily = AnekBangla, fontSize = 14.sp, color = cs.onSurface)
     }
