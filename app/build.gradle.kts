@@ -4,6 +4,21 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// ---------------------------------------------------------------------------
+// App configuration (React .env -> BuildConfig). Looked up in this order:
+//   1) environment variable  2) local.properties  3) gradle -P property
+// Names: SUPABASE_URL, SUPABASE_KEY, ADMIN_PHONE, ADMIN_WA
+// ---------------------------------------------------------------------------
+val localProps = java.util.Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
+fun cfg(name: String): String {
+    val raw = System.getenv(name) ?: localProps.getProperty(name) ?: (findProperty(name) as String?) ?: ""
+    return raw.trim().replace("\\", "\\\\").replace("\"", "\\\"")
+}
+
 android {
     namespace = "com.srizwan.task"
     compileSdk = 37
@@ -15,6 +30,11 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         vectorDrawables.useSupportLibrary = true
+
+        buildConfigField("String", "SUPABASE_URL", "\"${cfg("SUPABASE_URL")}\"")
+        buildConfigField("String", "SUPABASE_KEY", "\"${cfg("SUPABASE_KEY")}\"")
+        buildConfigField("String", "ADMIN_PHONE", "\"${cfg("ADMIN_PHONE")}\"")
+        buildConfigField("String", "ADMIN_WA", "\"${cfg("ADMIN_WA")}\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -70,6 +90,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.datastore:datastore-preferences:1.1.7")
 
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
