@@ -1,12 +1,24 @@
 name: Android Build
 
+# Builds a debug APK and publishes it to GitHub Releases.
+# Required repository secrets: SUPABASE_URL, SUPABASE_KEY, ADMIN_PHONE, ADMIN_WA
+
 on:
   workflow_dispatch:
+
+env:
+  APP_NAME: RizwanTask
+  GRADLE_VERSION: '9.7.0'   # keep in sync with the AGP version in app/build.gradle.kts
+
+concurrency:
+  group: debug-build-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
     name: Generate and Release APK
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     permissions:
       contents: write
@@ -20,22 +32,18 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
-      # FIX: 8.11.1 → 8.13 — AGP 8.13.2 এর ডিফল্ট/ন্যূনতম Gradle রিকোয়ারমেন্টের
-      # সাথে মিলিয়ে আপডেট করা হলো (আগের turn এ সাজেস্ট করা নিরাপদ AGP আপগ্রেড
-      # পাথ ধরে)। আপনার build.gradle.kts এর AGP ভার্সনের সাথে এটা মিলিয়ে রাখুন —
-      # AGP 8.13.2 হলে Gradle 8.13 ঠিক আছে, AGP 9.4.0 হলে নিচে '9.7.0' ব্যবহার করুন।
-      - name: Setup Gradle 9.7.0
-        uses: gradle/actions/setup-gradle@v3
+      # setup-gradle handles Gradle caching, so setup-java's `cache: gradle` is not needed.
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.7.0'
+          gradle-version: ${{ env.GRADLE_VERSION }}
 
       - name: Verify Gradle Version
         run: gradle --version
 
       - name: Build Debug APK
-        run: gradle assembleDebug
+        run: gradle assembleDebug --stacktrace
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
@@ -43,20 +51,25 @@ jobs:
           ADMIN_WA: ${{ secrets.ADMIN_WA }}
 
       - name: Verify APK
+        id: verify
         run: |
           ls -lh app/build/outputs/apk/debug/app-debug.apk
+          echo "sha256=$(sha256sum app/build/outputs/apk/debug/app-debug.apk | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/debug/app-debug.apk
           tag_name: build-${{ github.run_number }}
-          name: Nagad App v${{ github.run_number }}
+          name: ${{ env.APP_NAME }} v${{ github.run_number }} (Debug)
           body: |
-            Android APK successfully built.
+            Debug Android APK.
 
-            Download:
-            app-debug.apk
+            Build: #${{ github.run_number }}
+            Commit: `${{ github.sha }}`
+            SHA-256: `${{ steps.verify.outputs.sha256 }}`
+
+            Download: app-debug.apk
           draft: false
           prerelease: false
         env:
