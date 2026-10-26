@@ -19,6 +19,7 @@ import com.srizwan.task.core.Session
 import com.srizwan.task.screens.LoginScreen
 import com.srizwan.task.screens.PlaceholderScreen
 import com.srizwan.task.screens.admin.AdminScreen
+import com.srizwan.task.screens.profile.ProfileScreen
 import com.srizwan.task.screens.SignupScreen
 import com.srizwan.task.screens.SplashScreen
 import com.srizwan.task.screens.SupportScreen
@@ -111,7 +112,7 @@ fun AppNav() {
         composable(Routes.LOGIN) { key(reload) { LoginScreen() } }
         composable(Routes.SIGNUP) { key(reload) { SignupScreen() } }
         composable(Routes.TASK) { key(reload) { TaskScreen() } }
-        composable(Routes.PROFILE) { key(reload) { PlaceholderScreen("প্রোফাইল", "ধাপ ৩-এ আসবে") } }
+        composable(Routes.PROFILE) { key(reload) { ProfileScreen() } }
         composable(Routes.SUPPORT) { key(reload) { SupportScreen() } }
         composable(Routes.ADMIN) { key(reload) { AdminScreen() } }
         composable(
