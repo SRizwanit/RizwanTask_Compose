@@ -56,7 +56,8 @@ import org.json.JSONTokener
 /**
  * React admin/BooksTab.jsx — part 2-জ-২: new / edit book dialog and JSON import.
  * 2-ঝ-১ added: "গুনুন" (page count) button, the automatic page count after saving / importing and the import's "count" option.
- * Not here yet (2-ঝ-২): "ছবি তৈরির workflow" + split checkboxes and their hint, the import's "run workflow" option.
+ * 2-ঝ-২-ছ added: "ছবি তৈরির workflow" + split checkboxes with the output-folder hint, and the workflow start after saving.
+ * Not here yet (2-ঝ-২-জ): the import's "run workflow" option.
  */
 
 // ---------------------------------------------------------------------------
@@ -100,6 +101,9 @@ fun BookDialog(vm: AdminViewModel, book: JSONObject?, onClose: () -> Unit) {
     var err by remember { mutableStateOf("") }
     var saving by remember { mutableStateOf(false) }
     var fCounting by remember { mutableStateOf(false) }
+    // React blank(): run = true, fromBook(): run = false; split is always false
+    var wantRunUi by remember { mutableStateOf(book == null) }
+    var splitUi by remember { mutableStateOf(false) }
     val none = remember { JSONObject() }
 
     /** "গুনুন": counts the images in the GitHub folder (for the form's current name / folder / repo) into the page-count field. */
@@ -130,6 +134,16 @@ fun BookDialog(vm: AdminViewModel, book: JSONObject?, onClose: () -> Unit) {
         row.put("page_rate", if (rv.isEmpty()) JSONObject.NULL else rn)
         // total_pages = Math.max(0, Math.round(Number(tv)) || 0)
         row.put("total_pages", if (tv.isEmpty()) JSONObject.NULL else (tv.toDoubleOrNull()?.takeIf { it.isFinite() }?.let { Math.floor(it + 0.5).toLong() } ?: 0L).coerceAtLeast(0L))
+        val wantRun = wantRunUi; val split = splitUi
+        // a new book with image creation keeps total pages blank: it shows on the Task page once the images exist and are counted
+        if (wantRun && editId == null) row.put("total_pages", JSONObject.NULL)
+        if (wantRun) {   // validate before saving so nothing is half done
+            val pu = row.getString("pdf_url")
+            if (pu.isEmpty()) { err = "ছবি তৈরির জন্য পিডিএফ লিংক দিন"; return }
+            if (pdfLinks(pu).size > 1) { err = "একটি কিতাবে একটাই পিডিএফ লিংক দিন"; return }
+            if (ghTok(S).isEmpty()) { err = "workflow চালাতে সেটিংস ট্যাবে GitHub Token দিন"; return }
+        }
+        setSplitPref(split)
         err = ""; saving = true
         val name = row.getString("name")
         AppScope.scope.launch {
@@ -157,12 +171,12 @@ fun BookDialog(vm: AdminViewModel, book: JSONObject?, onClose: () -> Unit) {
                 return@launch
             }
             saving = false
-            val list = vm.loadBooks()
+            val list = vm.reloadBooks()
             val savedId = saved?.idStr()?.takeIf { it.isNotEmpty() } ?: editId
             val bk = list.firstOrNull { it.idStr() == savedId } ?: saved
-            // 2-ঝ-২: the workflow start (when "ছবি তৈরি" is ticked) goes here.
+            if (wantRun) { if (bk != null) vm.startRun(bk, split) }
             // Total pages left blank: count them from the GitHub folder by itself.
-            if (row.isNull("total_pages") && bk != null && bk.idStr().isNotEmpty()) autoCount(vm, bk, true)
+            else if (row.isNull("total_pages") && bk != null && bk.idStr().isNotEmpty()) autoCount(vm, bk, true)
         }
     }
 
@@ -208,6 +222,13 @@ fun BookDialog(vm: AdminViewModel, book: JSONObject?, onClose: () -> Unit) {
                         withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("প্রিফিক্স_proofed.json") }
                     },
                     color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, lineHeight = 18.sp
+                )
+                ChkRow(wantRunUi, { wantRunUi = it }, "সংরক্ষণের পর পিডিএফ থেকে ছবি তৈরির workflow চালান")
+                ChkRow(splitUi, { splitUi = it }, "প্রতিটি পেইজ বাম-ডান দুই ভাগ (split) করুন")
+                val nm = sl(fm.fold).ifEmpty { sl(fm.name) }
+                HintText(
+                    if (nm.isNotEmpty()) "আউটপুট ফোল্ডার: ${nm}_${S.str("pages_dir")?.takeIf { it.isNotEmpty() } ?: DEF.getValue("pages_dir")} • workflow: ${wfFile()}"
+                    else "workflow: ${wfFile()}"
                 )
                 HintText("নতুন কিতাব Task পেইজে তখনই দেখাবে, যখন ছবি তৈরি শেষ হয়ে মোট পেইজ গণনা সম্পন্ন হবে।")
                 if (err.isNotEmpty()) ErrText(err)
@@ -356,11 +377,11 @@ fun ImportDialog(vm: AdminViewModel, onClose: () -> Unit) {
                 }
             } catch (e: CancellationException) { throw e } catch (x: Exception) {
                 err = "ইমপোর্ট ব্যর্থ (${Fmt.bn(added)}টি সংরক্ষিত হয়েছে): ${x.message}"; busy = false; prog = ""
-                vm.loadBooks()
+                vm.reloadBooks()
                 return@launch
             }
             prog = "তালিকা রিফ্রেশ হচ্ছে…"
-            val list = vm.loadBooks()
+            val list = vm.reloadBooks()
             AppToast.show("${Fmt.bn(added)}টি কিতাব ইমপোর্ট হয়েছে")
             val keys = toSave.map { keyOf(it.str("name"), it.str("pdf_url")) }.toSet()
             val fresh = list.filter { keyOf(it.str("name"), it.str("pdf_url")) in keys }

@@ -85,7 +85,10 @@ class AdminViewModel : ViewModel() {
         started = true
         viewModelScope.launch { loadUsers() }
         viewModelScope.launch { fetchS(); loadBooks() }
+        poller.schedule(8000)
     }
+
+    override fun onCleared() { poller.stop() }
 
     // ---- setters (keep derived values in sync) ----
     fun updateS(v: JSONObject) { S = v }
@@ -111,9 +114,9 @@ class AdminViewModel : ViewModel() {
         }
     }
 
-    /** Status polling hook — the real polling (schedulePoll / pollRuns) arrives in 2-ঝ-২-গ; until then the card shows "queued". */
-    var onSchedulePoll: ((Long) -> Unit)? = null
-    fun schedulePoll(ms: Long) { onSchedulePoll?.invoke(ms) }
+    /** Status polling of the image-creation runs (React `schedulePoll` / `pollRuns`) — see RunPoller.kt. */
+    val poller = RunPoller(this, viewModelScope)
+    fun schedulePoll(ms: Long) = poller.schedule(ms)
 
     /** Starts the image-creation workflow for a book. Returns true when it started. */
     suspend fun startRun(b: JSONObject, split: Boolean, quiet: Boolean = false): Boolean {
@@ -139,6 +142,9 @@ class AdminViewModel : ViewModel() {
     suspend fun loadBooks(): List<JSONObject> = try {
         Sb.get("books?select=*&order=created_at.desc").objects().also { updateBooks(it) }
     } catch (e: CancellationException) { throw e } catch (e: Exception) { toast(e); books }
+
+    /** React BooksTab `reload`: reload the books, then check the run states right away. */
+    suspend fun reloadBooks(): List<JSONObject> = loadBooks().also { poller.pollNow() }
 
     suspend fun fetchS(): JSONObject {
         var s = JSONObject()

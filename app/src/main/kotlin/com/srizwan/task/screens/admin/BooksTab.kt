@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +33,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -62,7 +66,7 @@ import org.json.JSONObject
 import java.text.Collator
 import java.util.Locale
 
-/** (key, label) — React FLT. running / done / failed stay empty until the image-creation runs arrive (step 2-ঝ). */
+/** (key, label) — React FLT. running / done / failed come from [RunStore.runs] (filled by RunPoller); the chips show the live counts (React `fcount`). */
 private val FLT = listOf(
     "all" to "সব", "hidden" to "লুকানো", "notshown" to "Task-এ দেখাচ্ছে না",
     "running" to "ছবি তৈরি চলছে", "done" to "ছবি তৈরি সম্পন্ন", "failed" to "ব্যর্থ / বাতিল"
@@ -84,7 +88,7 @@ private fun matchF(k: String, v: BkView): Boolean =
 /**
  * React admin/BooksTab.jsx — parts 2-জ-১ (list, search / filter / sort, per-book progress, hide / show, delete,
  * selection mode with bulk hide / show / rate / delete) and 2-জ-২ (header buttons + the dialogs in BookDialogs.kt).
- * 2-ঝ-১: page counting (card / all / bulk). Still to come (2-ঝ-২): image-creation workflow, run status box + polling, bulk run.
+ * 2-ঝ-১: page counting. 2-ঝ-২-ক/খ: run box + start run. 2-ঝ-২-গ: status polling + automatic count after a successful run (RunPoller.kt). Still to come (2-ঝ-২-ঘ…): run filter counts check, retry-all, bulk run, run options in dialogs / import.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -104,14 +108,38 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
     var impOpen by remember { mutableStateOf(false) }                       // JSON import dialog
     var counting by remember { mutableStateOf("") }                         // book id whose "পেইজ গণনা" is running
     var allCounting by remember { mutableStateOf(false) }
+    // bulk image-creation dialog state (React runOpen / runList / runSplit / runErr)
+    var runOpen by remember { mutableStateOf(false) }
+    var runList by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
+    var runSplit by remember { mutableStateOf(false) }
+    var runErr by remember { mutableStateOf("") }
 
     fun toast(m: String, bad: Boolean = false) = AppToast.show(m, bad)
 
     // Opening the tab loads the proofs (cached for 20 s) for the progress bars.
-    LaunchedEffect(openKey) { if (openKey > 0) vm.loadProofs() }
+    LaunchedEffect(openKey) { if (openKey > 0) { vm.loadProofs(); vm.poller.pollNow() } }
 
-    fun reload() { AppScope.scope.launch { vm.loadBooks() } }
+    // React `visibilitychange`: polling only while the app is in the foreground; coming back polls at once.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        vm.poller.visible = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+        var ready = false   // addObserver replays the current state once: ignore that replay
+        val obs = LifecycleEventObserver { _, e ->
+            if (e == Lifecycle.Event.ON_START) { vm.poller.visible = true; if (ready) vm.poller.pollNow() }
+            else if (e == Lifecycle.Event.ON_STOP) vm.poller.visible = false
+        }
+        lifecycle.addObserver(obs); ready = true
+        onDispose { lifecycle.removeObserver(obs) }
+    }
+
+    fun reload() { AppScope.scope.launch { vm.reloadBooks() } }
     fun exitSel() { selMode = false; sel = emptySet() }
+
+    /** React `openRunDlg(list)`: opens the bulk image-creation dialog for [list]. */
+    fun openRunDlg(list: List<JSONObject>) {
+        if (list.isEmpty()) { toast("কোনো কিতাব সিলেক্ট করা হয়নি", true); return }
+        runList = list.toList(); runSplit = false; runErr = ""; runOpen = true
+    }
 
     // ---- search + filter + sort ----
     val books = vm.books
@@ -289,6 +317,26 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
         }
     }
 
+    /** React `doBulkRun`: starts the image-creation workflow one book after another. */
+    fun doBulkRun() {
+        val list = runList.filter { !it.str("pdf_url").isNullOrEmpty() }
+        if (list.isEmpty()) { runErr = "সিলেক্ট করা কিতাবগুলোর কোনোটিতেই পিডিএফ লিংক নেই"; return }
+        if (ghTok(vm.S).isEmpty()) { runErr = "workflow চালাতে সেটিংস ট্যাবে GitHub Token দিন"; return }
+        runErr = ""; bulkBusy = true; setSplitPref(runSplit)
+        val split = runSplit
+        AppScope.scope.launch {
+            var ok = 0
+            try {
+                for (i in list.indices) {
+                    toast("workflow চালু ${Fmt.bn(i + 1)}/${Fmt.bn(list.size)} — ${list[i].str("name").orEmpty()}")
+                    if (vm.startRun(list[i], split, true)) ok++
+                }
+            } finally { bulkBusy = false }
+            runOpen = false; exitSel()
+            toast("${Fmt.bn(ok)}টি কিতাবের ছবি তৈরির workflow চালু হয়েছে — স্ট্যাটাস কার্ডে দেখা যাবে" + (if (ok < list.size) " • ${Fmt.bn(list.size - ok)}টি চালু হয়নি" else ""), ok < list.size)
+        }
+    }
+
     fun openBulkRate() {
         if (selList.isEmpty()) { toast("কোনো কিতাব সিলেক্ট করা হয়নি", true); return }
         rateList = selList.toList(); rateVal = ""; rateErr = ""; rateOpen = true
@@ -328,7 +376,7 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
         // header row
         Text("সব কিতাব", color = cs.onSurface, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(bottom = 8.dp))
         FlowRow(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SmBtn("", "refresh") { AppScope.scope.launch { vm.loadBooks(); toast("রিফ্রেশ হয়েছে") } }
+            SmBtn("", "refresh") { AppScope.scope.launch { vm.reloadBooks(); toast("রিফ্রেশ হয়েছে") } }
             SmBtn("সব গণনা", "refresh", enabled = !allCounting) { countAll() }
             SmBtn("JSON ইমপোর্ট", "plus") { impOpen = true }
             SmBtn(if (selMode) "সিলেক্ট বন্ধ" else "সিলেক্ট", "check", tone = if (selMode) "primary" else "", enabled = !bulkBusy) {
@@ -344,6 +392,12 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
         // filter chips (label + count)
         Column(Modifier.padding(bottom = 12.dp)) {
             Chips(items = FLT.map { (k, l) -> k to "$l (${Fmt.bn(fcount[k] ?: 0)})" }, value = f.flt, onPick = { vm.updateBooksFilter(f.copy(flt = it)) })
+        }
+        // "retry all failed": the books now shown under the failed filter that have a PDF link
+        if (f.flt == "failed" && !selMode && (fcount["failed"] ?: 0) > 0) {
+            Box(Modifier.padding(bottom = 10.dp)) {
+                SmBtn("সব ব্যর্থ আবার চেষ্টা", "play", tone = "primary") { openRunDlg(shown.filter { !it.str("pdf_url").isNullOrEmpty() }) }
+            }
         }
         HintText("${Fmt.bn(shown.size)}টি কিতাব দেখানো হচ্ছে (মোট ${Fmt.bn(books.size)}টি)", Modifier.padding(bottom = 10.dp))
 
@@ -366,6 +420,7 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                     SmBtn("দেখান", "check", enabled = !bulkBusy && selCount > 0) { bulkHide(false) }
                     SmBtn("রেট", "edit", enabled = !bulkBusy && selCount > 0) { openBulkRate() }
                     SmBtn("পেইজ গণনা", "refresh", enabled = !bulkBusy && selCount > 0) { bulkCount() }
+                    SmBtn("ছবি তৈরি", "play", enabled = !bulkBusy && selCount > 0) { openRunDlg(selList) }
                     SmBtn("ডিলিট (${Fmt.bn(selCount)})", "trash", tone = "bad", enabled = !bulkBusy && selCount > 0) { delSelected() }
                 }
             }
@@ -474,6 +529,37 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
     // new / edit book dialog and JSON import (BookDialogs.kt)
     if (bookDlg) androidx.compose.runtime.key(editBook?.idStr() ?: "new") { BookDialog(vm, editBook, onClose = { bookDlg = false }) }
     if (impOpen) ImportDialog(vm, onClose = { impOpen = false })
+
+    // bulk image-creation / retry dialog (React bRunDlg)
+    if (runOpen) {
+        val withPdf = runList.count { !it.str("pdf_url").isNullOrEmpty() }
+        val noPdf = runList.size - withPdf
+        AlertDialog(
+            onDismissRequest = { if (!bulkBusy) runOpen = false },
+            title = { Text("ছবি তৈরির workflow চালান", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    HintText(
+                        "${Fmt.bn(withPdf)}টি কিতাবের জন্য আলাদা workflow চালু হবে" +
+                            (if (noPdf > 0) " (পিডিএফ লিংক নেই এমন ${Fmt.bn(noPdf)}টি বাদ যাবে)" else "") +
+                            "। একই নামের ছবি নতুন করে লেখা হবে; পুরনো ছবি মুছবে না।\n" +
+                            runList.take(5).joinToString("\n") { "• " + it.str("name").orEmpty() } +
+                            (if (runList.size > 5) "\n… ও আরও ${Fmt.bn(runList.size - 5)}টি" else "")
+                    )
+                    Row(
+                        Modifier.fillMaxWidth().clickable(enabled = !bulkBusy) { runSplit = !runSplit },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = runSplit, onCheckedChange = { runSplit = it }, enabled = !bulkBusy)
+                        Text("প্রতিটি পেইজ বাম-ডান দুই ভাগ (split) করুন", color = cs.onSurface, fontSize = 13.sp)
+                    }
+                    if (runErr.isNotEmpty()) ErrText(runErr)
+                }
+            },
+            confirmButton = { TextButton(onClick = { doBulkRun() }, enabled = !bulkBusy) { Text("চালু করুন") } },
+            dismissButton = { TextButton(onClick = { runOpen = false }, enabled = !bulkBusy) { Text("বন্ধ") } }
+        )
+    }
 
     // bulk rate dialog (React bRateDlg)
     if (rateOpen) {
