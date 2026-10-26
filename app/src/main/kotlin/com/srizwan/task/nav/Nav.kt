@@ -22,7 +22,7 @@ import com.srizwan.task.screens.admin.AdminScreen
 import com.srizwan.task.screens.SignupScreen
 import com.srizwan.task.screens.SplashScreen
 import com.srizwan.task.screens.SupportScreen
-import com.srizwan.task.screens.TaskScreen
+import com.srizwan.task.screens.task.TaskScreen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
