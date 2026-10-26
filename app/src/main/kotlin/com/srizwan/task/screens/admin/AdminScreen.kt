@@ -94,6 +94,9 @@ fun AdminScreen(vm: AdminViewModel = viewModel()) {
                                 vm.tab == "Set" -> SettingsTab(vm, vm.openKey("Set"))
                                 vm.tab == "Notice" -> NoticeTab(vm, ask, vm.openKey("Notice"))
                                 vm.tab == "Log" -> LogTab(vm, vm.openKey("Log"))
+                                vm.tab == "Pay" -> PayTab(vm, ask, vm.openKey("Pay"))
+                                vm.tab == "Review" -> ReviewTab(vm, ask, vm.openKey("Review"))
+                                vm.tab == "Books" -> BooksTab(vm, ask, vm.openKey("Books"))
                                 else -> TabContent(vm, vm.tab)
                             }
                         }

@@ -20,6 +20,8 @@ class ProofStat(var n: Int = 0, var today: Int = 0, var w7: Int = 0, var last: L
 class BookStat(var n: Int = 0, var a: Int = 0, var p: Int = 0, var c: Int = 0)
 data class RvFilter(val st: String = "pending", val user: String = "", val book: String = "")
 data class LgFilter(val user: String = "", val act: String = "")
+/** Books tab search / filter / sort (React BooksTab `query`, `flt`, `sortBy`). */
+data class BkFilter(val query: String = "", val flt: String = "all", val sort: String = "new")
 
 /**
  * React Admin.jsx state + admin/useAdminData.js: shared users, books, settings, proofs, payments
@@ -48,6 +50,10 @@ class AdminViewModel : ViewModel() {
     var noticeTo by mutableStateOf(""); private set
     var noticeFocus by mutableIntStateOf(0); private set
     var logFilter by mutableStateOf(LgFilter()); private set
+    /** Pay tab filter (React PayTab `pyF`): requested / paid / rejected / "" = all. Kept here so it survives tab switches like the always-mounted React tab. */
+    var payFilter by mutableStateOf("requested"); private set
+    /** Kept here like [payFilter]: the React Books tab stays mounted, so its search / filter / sort survive tab switches. */
+    var booksFilter by mutableStateOf(BkFilter()); private set
 
     private var proofsAt = 0L
     private var started = false
@@ -57,6 +63,8 @@ class AdminViewModel : ViewModel() {
     fun updateRvFilter(f: RvFilter) { rvFilter = f }
     fun updateNoticeTo(v: String) { noticeTo = v }
     fun updateLogFilter(f: LgFilter) { logFilter = f }
+    fun updatePayFilter(v: String) { payFilter = v }
+    fun updateBooksFilter(f: BkFilter) { booksFilter = f }
 
     /** Jumps from Users / Dash to other tabs. */
     fun reviewUser(uid: String, resetBook: Boolean) {

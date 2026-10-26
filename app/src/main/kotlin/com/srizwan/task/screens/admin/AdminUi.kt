@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -173,9 +174,10 @@ fun AskDialog(c: AskController) {
         title = { Text(r.title, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                // `<label class="f">` above the textarea: wraps over several lines (a floating outlined label would be cut off).
+                if (r.label.isNotEmpty()) Text(r.label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, lineHeight = 19.sp)
                 OutlinedTextField(
                     value = v, onValueChange = { v = it; err = "" },
-                    label = if (r.label.isNotEmpty()) ({ Text(r.label) }) else null,
                     minLines = r.rows, modifier = Modifier.fillMaxWidth()
                 )
                 if (err.isNotEmpty()) Text(err, color = errColor(), fontSize = 12.sp)
@@ -216,18 +218,18 @@ fun LiCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     ) { content() }
 }
 
-/** `button.sm` — tone: "" / "warn" (button.warnb) / "bad" (button.danger). */
+/** `button.sm` — tone: "" / "primary" (button.primary) / "ok" (button.ok) / "warn" (button.warnb) / "bad" (button.danger). [enabled] = !disabled; [compact] = padding 2px 8px (small "কপি" button). */
 @Composable
-fun SmBtn(text: String, icon: String? = null, tone: String = "", onClick: () -> Unit) {
+fun SmBtn(text: String, icon: String? = null, tone: String = "", enabled: Boolean = true, compact: Boolean = false, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
-    val c: Color = when (tone) { "warn" -> warnColor(); "bad" -> errColor(); else -> cs.onSurface }
+    val c: Color = when (tone) { "ok" -> okColor(); "warn" -> warnColor(); "bad" -> errColor(); "primary" -> cs.onPrimary; else -> cs.onSurface }
     val shape = RoundedCornerShape(8.dp)
     Row(
-        Modifier.clip(shape)
-            .background(if (tone.isEmpty()) cs.surfaceVariant.copy(alpha = 0.55f) else Color.Transparent)
-            .border(1.dp, if (tone.isEmpty()) cs.outline.copy(alpha = 0.6f) else c, shape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 7.dp),
+        Modifier.alpha(if (enabled) 1f else 0.5f).clip(shape)
+            .background(when (tone) { "" -> cs.surfaceVariant.copy(alpha = 0.55f); "primary" -> cs.primary; else -> Color.Transparent })
+            .border(1.dp, when (tone) { "" -> cs.outline.copy(alpha = 0.6f); "primary" -> cs.primary; else -> c }, shape)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = if (compact) 8.dp else 10.dp, vertical = if (compact) 2.dp else 7.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp)
     ) {
