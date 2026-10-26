@@ -10,6 +10,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -27,6 +29,9 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
+import com.srizwan.task.core.ThemeMode
+import com.srizwan.task.core.ThemeStore
+import com.srizwan.task.ui.AppTypography
 
 /*
  * ---------------------------------------------------------------------------
@@ -50,7 +55,7 @@ import kotlin.random.Random
  *       scrim      = true   -> soft calm area in the middle (good for logo / text)
  *       fireflies  = false  -> turn the fireflies off
  *       flowers    = false  -> turn the small flowers off
- *       darkTheme  = ...    -> force night or day (default: follows the system)
+ *       darkTheme  = ...    -> force night or day (default: follows the app theme = system / light / dark)
  * ---------------------------------------------------------------------------
  */
 
@@ -83,15 +88,31 @@ private val DarkColors = darkColorScheme(
     outline = Color(0xFF4F7A56)
 )
 
+/** true when the app is currently in night mode (system / forced light / forced dark, see ThemeStore). */
+val LocalAppDark = compositionLocalOf { false }
+
+@Composable
+fun rememberAppDark(): Boolean {
+    val system = isSystemInDarkTheme()
+    return when (ThemeStore.mode) {
+        ThemeMode.AUTO -> system
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+}
+
 @Composable
 fun RizwanTaskTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = rememberAppDark(),
     content: @Composable () -> Unit
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColors else LightColors,
-        content = content
-    )
+    CompositionLocalProvider(LocalAppDark provides darkTheme) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkColors else LightColors,
+            typography = AppTypography,
+            content = content
+        )
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -100,7 +121,7 @@ fun RizwanTaskTheme(
 @Composable
 fun RizwanBackground(
     modifier: Modifier = Modifier,
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = LocalAppDark.current,
     scrim: Boolean = false,
     fireflies: Boolean = true,
     flowers: Boolean = true,
