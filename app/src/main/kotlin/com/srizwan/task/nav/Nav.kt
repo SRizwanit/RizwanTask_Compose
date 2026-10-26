@@ -18,8 +18,10 @@ import com.srizwan.task.core.Auth
 import com.srizwan.task.core.Session
 import com.srizwan.task.screens.LoginScreen
 import com.srizwan.task.screens.PlaceholderScreen
+import com.srizwan.task.screens.admin.AdminScreen
 import com.srizwan.task.screens.SignupScreen
 import com.srizwan.task.screens.SplashScreen
+import com.srizwan.task.screens.SupportScreen
 import com.srizwan.task.screens.TaskScreen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -110,8 +112,8 @@ fun AppNav() {
         composable(Routes.SIGNUP) { key(reload) { SignupScreen() } }
         composable(Routes.TASK) { key(reload) { TaskScreen() } }
         composable(Routes.PROFILE) { key(reload) { PlaceholderScreen("প্রোফাইল", "ধাপ ৩-এ আসবে") } }
-        composable(Routes.SUPPORT) { key(reload) { PlaceholderScreen("সাপোর্ট", "ধাপ ২-এ আসবে") } }
-        composable(Routes.ADMIN) { key(reload) { PlaceholderScreen("অ্যাডমিন", "ধাপ ২-এ আসবে", adminOnly = true) } }
+        composable(Routes.SUPPORT) { key(reload) { SupportScreen() } }
+        composable(Routes.ADMIN) { key(reload) { AdminScreen() } }
         composable(
             Routes.VIEW_PATTERN,
             arguments = listOf(
