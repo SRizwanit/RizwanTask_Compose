@@ -123,6 +123,11 @@ fun saveWfFile(v: String) {
     if (t.isNotEmpty()) Prefs.putString(WK, t) else Prefs.remove(WK)
 }
 
+/** "Split left/right" choice (React kp_split_pref_v2; default = not ticked). */
+private const val SK2 = "kp_split_pref_v2"
+fun getSplitPref(): Boolean = Prefs.getString(SK2) == "1"
+fun setSplitPref(v: Boolean) = Prefs.putString(SK2, if (v) "1" else "0")
+
 /** JS String(number): 50.0 -> "50", 0.2 -> "0.2"; text stays as is; null -> "". */
 fun numStr(v: Any?): String = when {
     v == null || v == JSONObject.NULL -> ""

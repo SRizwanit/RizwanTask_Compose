@@ -10,6 +10,8 @@ import com.srizwan.task.core.AppToast
 import com.srizwan.task.core.Earnings
 import com.srizwan.task.core.Sb
 import com.srizwan.task.core.Summary
+import com.srizwan.task.core.enc
+import com.srizwan.task.core.jsonOf
 import com.srizwan.task.core.objects
 import com.srizwan.task.core.str
 import kotlinx.coroutines.CancellationException
@@ -94,6 +96,38 @@ class AdminViewModel : ViewModel() {
 
     fun uname(id: String?): String = users.firstOrNull { it.idStr() == id }?.str("full_name") ?: "ইউজার"
     fun bname(id: String?): String = books.firstOrNull { it.idStr() == id }?.str("name") ?: "কিতাব"
+
+    // ---- image-creation runs (React BooksTab startRun / saveRun) ----
+    /** Remember a run on this phone and in Supabase (gh_run_id / gh_run_at); a Supabase failure is ignored like React. */
+    fun saveRun(b: JSONObject, info: RunInfo) {
+        val id = b.idStr()
+        RunStore.saveLocal(id, info)
+        viewModelScope.launch {
+            try {
+                val p = jsonOf("gh_run_id" to info.id, "gh_run_at" to info.at)
+                Sb.patch("books?id=eq.${enc(id)}", p)
+                if (b.has("gh_run_id")) patchBook(id, p)
+            } catch (e: CancellationException) { throw e } catch (e: Exception) { /* ignore */ }
+        }
+    }
+
+    /** Status polling hook — the real polling (schedulePoll / pollRuns) arrives in 2-ঝ-২-গ; until then the card shows "queued". */
+    var onSchedulePoll: ((Long) -> Unit)? = null
+    fun schedulePoll(ms: Long) { onSchedulePoll?.invoke(ms) }
+
+    /** Starts the image-creation workflow for a book. Returns true when it started. */
+    suspend fun startRun(b: JSONObject, split: Boolean, quiet: Boolean = false): Boolean {
+        return try {
+            if (!quiet) AppToast.show("workflow চালু করা হচ্ছে…")
+            val info = dispatchBook(S, b, split)
+            saveRun(b, info); RunStore.setRun(b.idStr(), RunState("queued"))
+            if (!quiet) AppToast.show("ছবি তৈরির workflow চালু হয়েছে — স্ট্যাটাস কিতাবের কার্ডে দেখা যাবে")
+            schedulePoll(3000)
+            true
+        } catch (e: CancellationException) { throw e } catch (e: Exception) {
+            AppToast.show("workflow চালু হয়নি: ${e.message}", true); false
+        }
+    }
 
     // ---- loaders ----
     private fun toast(e: Exception) = AppToast.show(e.message ?: "", true)

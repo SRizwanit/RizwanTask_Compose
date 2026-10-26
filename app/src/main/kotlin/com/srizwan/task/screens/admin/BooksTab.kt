@@ -119,7 +119,10 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
         val x = vm.bst[b.idStr()] ?: BookStat()
         val tot = b.finiteNum("total_pages") ?: 0.0
         val hidden = b.optBoolean("hidden", false)
-        return BkView(x, tot, hidden, notShown = vm.proofsLoaded && !hidden && tot == 0.0 && x.n == 0, running = false, done = false, failed = false)
+        val r = RunStore.stateOf(b.idStr())
+        return BkView(x, tot, hidden, notShown = vm.proofsLoaded && !hidden && tot == 0.0 && x.n == 0, running = r != null && isActiveRun(r),
+            done = r != null && r.status == "completed" && r.conclusion == "success",
+            failed = r != null && r.status == "completed" && r.conclusion != "success")
     }
     val qn = f.query.trim().lowercase()
     val searched = books.filter { qn.isEmpty() || it.str("name").orEmpty().lowercase().contains(qn) || it.str("author").orEmpty().lowercase().contains(qn) }
@@ -192,6 +195,16 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                 toast("মোট পেইজ: ${Fmt.bn(c.n)}" + (if (c.truncated) " (তালিকা অসম্পূর্ণ হতে পারে)" else ""))
             } catch (e: CancellationException) { throw e } catch (e: Exception) { toast("গণনা ব্যর্থ: ${e.message}", true) }
             finally { counting = "" }
+        }
+    }
+
+    /** Card button "ছবি তৈরি" (React act('run')): confirm, then start the workflow with the saved split choice. */
+    fun runOne(bk: JSONObject) {
+        AppScope.scope.launch {
+            val sp = getSplitPref()
+            val msg = "\"${bk.str("name").orEmpty()}\" — পিডিএফ থেকে আবার ছবি তৈরি করবেন?\n\nআউটপুট ফোল্ডার: ${outDirOf(vm.S, bk)}\nবাম-ডান ভাগ: ${if (sp) "হ্যাঁ" else "না"}\n(একই নামের ছবি নতুন করে লেখা হবে; পুরনো ছবি মুছবে না)"
+            if (!ask.confirm(msg)) return@launch
+            vm.startRun(bk, sp)
         }
     }
 
@@ -390,8 +403,14 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                         Text(b.str("name").orEmpty(), color = cs.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
-                                        if (v.hidden) Text("🚫 লুকানো", color = cs.onSurfaceVariant, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                        if (v.notShown) Text("⏳ Task পেইজে দেখাচ্ছে না (ছবি তৈরি ও পেইজ গণনা বাকি)", color = cs.onSurfaceVariant, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        if (v.hidden) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                            AppIcon("ban", size = 13.dp, tint = cs.onSurfaceVariant)
+                                            Text("লুকানো", color = cs.onSurfaceVariant, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        }
+                                        if (v.notShown) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                            AppIcon("clock", size = 13.dp, tint = cs.onSurfaceVariant)
+                                            Text("Task পেইজে দেখাচ্ছে না (ছবি তৈরি ও পেইজ গণনা বাকি)", color = cs.onSurfaceVariant, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        }
                                     }
                                     val noGh = b.str("github_username").isNullOrEmpty() && b.str("repo_name").isNullOrEmpty()
                                     val folder = b.str("folder")?.takeIf { it.isNotEmpty() } ?: b.str("name").orEmpty()
@@ -433,11 +452,15 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                                     )
                                 }
                             }
+                            if (RunStore.getRun(b) != null) RunBox(RunStore.stateOf(id))
                             if (!selMode) {
                                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     SmBtn("পেইজ গণনা", "refresh", enabled = counting != id) { countOne(b) }
                                     SmBtn(if (v.hidden) "দেখান" else "লুকান", if (v.hidden) "check" else "ban") { toggleHide(b) }
                                     SmBtn("এডিট", "edit") { editBook = b; bookDlg = true }
+                                    // retry opens the bulk run dialog in React (2-ঝ-২-চ); until then it asks the same question as "ছবি তৈরি"
+                                    if (v.failed && b.str("pdf_url").orEmpty().isNotEmpty()) SmBtn("আবার চেষ্টা", "play", tone = "primary") { runOne(b) }
+                                    if (b.str("pdf_url").orEmpty().isNotEmpty()) SmBtn("ছবি তৈরি", "play") { runOne(b) }
                                     SmBtn("ডিলিট", "trash", tone = "bad") { deleteBook(b) }
                                 }
                             }
