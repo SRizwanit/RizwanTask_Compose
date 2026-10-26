@@ -197,6 +197,11 @@ jobs:
 
       - name: Build Unsigned Release APK
         run: gradle assembleRelease
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          ADMIN_PHONE: ${{ secrets.ADMIN_PHONE }}
+          ADMIN_WA: ${{ secrets.ADMIN_WA }}
 
       - name: Locate Unsigned APK
         id: find_apk
