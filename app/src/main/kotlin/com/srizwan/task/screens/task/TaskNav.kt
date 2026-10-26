@@ -90,7 +90,7 @@ fun TaskHeader(
 
 /** React `.cnt`: gold pill "✓ N টি সম্পন্ন" (the tick is a vector icon). */
 @Composable
-private fun CountChip(n: Int) {
+internal fun CountChip(n: Int) {
     val cs = MaterialTheme.colorScheme
     val gold = goldColor()
     Row(
@@ -106,7 +106,7 @@ private fun CountChip(n: Int) {
 }
 
 @Composable
-private fun HeaderBtn(text: String, icon: String, onClick: () -> Unit) {
+internal fun HeaderBtn(text: String, icon: String, onClick: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(8.dp)
     Row(

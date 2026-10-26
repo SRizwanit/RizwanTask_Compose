@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import com.srizwan.task.core.AppToast
 import com.srizwan.task.core.AppUser
 import com.srizwan.task.core.Earnings
+import com.srizwan.task.core.Fmt
 import com.srizwan.task.core.Sb
 import com.srizwan.task.core.Summary
 import com.srizwan.task.core.enc
@@ -38,11 +39,24 @@ class TaskData {
     var myCount by mutableStateOf<Int?>(null); private set
     var fin by mutableStateOf(Fin()); private set
 
+    /** React `goal` / `goalRef`: my daily goal in pages (saved per user in Prefs, default 20) — 3-খ-১. */
+    var goal by mutableStateOf(20)
+
+    /* ---- notices (3-খ-৩): `badge`, `nList`, `nIdx`, the dialog is open while [nOpen] ---- */
+    var badge by mutableStateOf(0); private set
+    var nList by mutableStateOf<List<JSONObject>>(emptyList()); private set
+    var nIdx by mutableStateOf(0)
+    var nOpen by mutableStateOf(false); private set
+    private var allNotices: List<JSONObject> = emptyList()
+
+    /** React `guide.current.isOpen()` — set by the guide dialog in 3-ঙ-২; a notice never opens over the guide. */
+    var guideOpen: () -> Boolean = { false }
+
     /** React `busy` ref: one loader of each kind at a time. */
     private var busyCnt = false
     private var busyMoney = false
 
-    /** Called with the fresh proofs after every money load — 3-খ-১ puts `goalToast` here (needs the daily goal). */
+    /** Called with the fresh proofs after every money load — TaskScreen sets it to `goalToast(proofs, goal, me.id)` (3-খ-১). */
     var onMoneyLoaded: ((List<JSONObject>) -> Unit)? = null
 
     /** React `booksById`: every book, hidden ones too (used for calculations). */
@@ -158,8 +172,47 @@ class TaskData {
         loadCounts(); loadMoney()
     }
 
-    /** React `refreshAll` (without notices — those are added in 3-খ-৩). */
-    suspend fun refreshAll() { loadCount(); loadCounts(); loadMoney() }
+    /** React `openNotices`: show these notices, starting at the first (the Task page passes oldest first, the Profile button newest first). */
+    fun showNotices(list: List<JSONObject>) { nList = list; nIdx = 0; if (!nOpen) nOpen = true }
+
+    /**
+     * React `loadNotices`: notices for everyone (`user_id` null) or for me, newest 40. The ones I have not seen and that
+     * are not older than my sign-up (minus a day) set the badge and open the dialog. Table `notices`
+     * (id, user_id, title, body, kind, created_at); a missing table is ignored.
+     * [autoOpen] = false is the Profile page: it only sets the badge (React Profile `loadNotices` never opens the dialog);
+     * the notices open from its "নোটিশ ও ঘোষণা" button. Returns the loaded list (newest first; empty on a failure).
+     */
+    suspend fun loadNotices(autoOpen: Boolean = true): List<JSONObject> {
+        val u = me ?: return emptyList()
+        try {
+            val list = Sb.get("notices?or=" + enc("(user_id.is.null,user_id.eq.${u.id})") + "&order=created_at.desc&limit=40").objects()
+            allNotices = list
+            val seen = readSeen(u.id)
+            val joined = Fmt.parseInstant(u.raw.str("created_at"))?.toEpochMilli()?.minus(86400000L) ?: 0L
+            val fresh = list.filter { n ->
+                val t = Fmt.parseInstant(n.str("created_at"))?.toEpochMilli()
+                (n.opt("id")?.toString() ?: "") !in seen && t != null && t >= joined
+            }.reversed()
+            badge = fresh.size
+            if (autoOpen && fresh.isNotEmpty() && !nOpen && !guideOpen()) showNotices(fresh)
+            return list
+        } catch (e: CancellationException) { throw e } catch (e: Exception) { /* no notices table */ }
+        return emptyList()
+    }
+
+    /** React `NoticeDialog` close + `onNoticeClosed`: every notice that was shown counts as seen; the badge is recounted. */
+    fun closeNotices() {
+        if (!nOpen) return
+        nOpen = false
+        val u = me ?: return
+        val s = readSeen(u.id)
+        nList.forEach { s.add(it.opt("id")?.toString() ?: "") }
+        writeSeen(u.id, s)
+        badge = allNotices.count { (it.opt("id")?.toString() ?: "") !in s }
+    }
+
+    /** React `refreshAll`. */
+    suspend fun refreshAll() { loadCount(); loadCounts(); loadMoney(); loadNotices() }
 
     /** React `retryAll`: no books yet -> full load, else refresh. */
     suspend fun retryAll() { if (books.isEmpty()) load() else refreshAll() }
