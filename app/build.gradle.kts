@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -9,7 +11,7 @@ plugins {
 //   1) environment variable  2) local.properties  3) gradle -P property
 // Names: SUPABASE_URL, SUPABASE_KEY, ADMIN_PHONE, ADMIN_WA
 // ---------------------------------------------------------------------------
-val localProps = java.util.Properties().apply {
+val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
