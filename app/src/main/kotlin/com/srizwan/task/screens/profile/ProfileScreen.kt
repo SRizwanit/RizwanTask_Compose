@@ -186,7 +186,7 @@ fun ProfileScreen() {
         scope.launch { data.loadCount() }
         scope.launch { data.loadMoney() }
         scope.launch { data.loadCounts() }
-__X__        scope.launch { data.loadNotices(autoOpen = false) }
+        scope.launch { data.loadNotices(autoOpen = false) }
     }
 
     // React setInterval(loadNotices, 180000): every 3 minutes while the app is on screen.
@@ -203,7 +203,7 @@ __X__        scope.launch { data.loadNotices(autoOpen = false) }
                 scope.launch { data.loadCount() }
                 scope.launch { data.loadMoney() }
                 scope.launch { data.loadCounts() }
-__X__                scope.launch { data.loadNotices(autoOpen = false) }
+                scope.launch { data.loadNotices(autoOpen = false) }
             }
         }
         lifecycle.addObserver(obs); ready = true
@@ -216,7 +216,7 @@ __X__                scope.launch { data.loadNotices(autoOpen = false) }
                 scope.launch { data.loadCount() }
                 scope.launch { data.loadMoney() }
                 scope.launch { data.loadCounts() }
-__X__                scope.launch { data.loadNotices(autoOpen = false) }
+                scope.launch { data.loadNotices(autoOpen = false) }
                 true
             }
         }
