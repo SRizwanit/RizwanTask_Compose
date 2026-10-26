@@ -8,6 +8,8 @@ import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import com.srizwan.task.core.Fmt
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
@@ -52,6 +55,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.srizwan.task.LocalAppDark
@@ -94,7 +98,7 @@ fun BrandHeader(
 
 /** `.card`: rounded panel with the golden gradient edge. */
 @Composable
-fun AppCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+fun AppCard(modifier: Modifier = Modifier, padding: Dp = 20.dp, content: @Composable ColumnScope.() -> Unit) {
     val cs = MaterialTheme.colorScheme
     val gold = goldColor()
     Surface(
@@ -104,7 +108,7 @@ fun AppCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -
         border = BorderStroke(1.dp, Brush.linearGradient(listOf(gold, cs.outline, cs.outline, gold))),
         shadowElevation = 6.dp
     ) {
-        Column(Modifier.padding(20.dp), content = content)
+        Column(Modifier.padding(padding), content = content)
     }
 }
 
@@ -131,7 +135,8 @@ fun AppField(
     pin: Boolean = false,
     password: Boolean = false,
     focusRequester: FocusRequester? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    leadingIcon: String? = null
 ) {
     val cs = MaterialTheme.colorScheme
     val interaction = remember { MutableInteractionSource() }
@@ -161,9 +166,11 @@ fun AppField(
                     .background(cs.surfaceVariant.copy(alpha = 0.55f), shape)
                     .border(if (focused) 2.dp else 1.dp, if (focused) cs.primary else cs.outline.copy(alpha = 0.6f), shape)
                     .padding(horizontal = 12.dp, vertical = 11.dp)
-                    .padding(start = if (pin) 13.dp else 0.dp),
+                    .padding(start = if (pin) 13.dp else if (leadingIcon != null) 24.dp else 0.dp),
                 contentAlignment = if (pin) Alignment.Center else Alignment.CenterStart
             ) {
+                // React: an icon laid over the input's left side (input padding-left 36px)
+                if (leadingIcon != null) AppIcon(leadingIcon, Modifier.align(Alignment.CenterStart).offset(x = (-1).dp), size = 18.dp, tint = cs.onSurfaceVariant)
                 if (value.isEmpty()) Text(placeholder, style = textStyle.copy(color = cs.onSurfaceVariant.copy(alpha = 0.55f)))
                 inner()
             }
@@ -173,7 +180,7 @@ fun AppField(
 
 /** `button.primary.block`: green gradient + a light shine sweeping across every 5.5 s (theme.css kpShine). */
 @Composable
-fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, icon: String? = null) {
     val cs = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(10.dp)
     val inf = rememberInfiniteTransition(label = "shine")
@@ -212,13 +219,21 @@ fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifi
             .padding(horizontal = 16.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = cs.onPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, textAlign = TextAlign.Center)
+        if (icon == null) {
+            Text(text, color = cs.onPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, textAlign = TextAlign.Center)
+        } else {
+            // button.primary with a leading <Icon/> (React: `<span><Icon name=".." /></span>text`)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                AppIcon(icon, size = 16.dp, tint = cs.onPrimary)
+                Text(text, color = cs.onPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(start = 8.dp))
+            }
+        }
     }
 }
 
-/** plain `button.block` (outlined panel) */
+/** plain `button.block` (outlined panel); [icon] = optional vector icon name before the text (React `<span><Icon/></span>`). */
 @Composable
-fun BlockButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+fun BlockButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, icon: String? = null) {
     val cs = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(10.dp)
     Box(
@@ -229,13 +244,16 @@ fun BlockButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 11.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = cs.onSurface, fontWeight = FontWeight.Medium, fontSize = 14.sp, textAlign = TextAlign.Center)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (icon != null) AppIcon(icon, size = 16.dp, tint = cs.onSurface)
+            Text(text, color = cs.onSurface, fontWeight = FontWeight.Medium, fontSize = 14.sp, textAlign = TextAlign.Center)
+        }
     }
 }
 
 /** `button.help.block` (primary outline) / `button.danger.block` (red outline) */
 @Composable
-fun OutlineButton(text: String, onClick: () -> Unit, color: Color, modifier: Modifier = Modifier, enabled: Boolean = true) {
+fun OutlineButton(text: String, onClick: () -> Unit, color: Color, modifier: Modifier = Modifier, enabled: Boolean = true, icon: String? = null, badge: Int = 0) {
     val shape = RoundedCornerShape(10.dp)
     Box(
         modifier.fillMaxWidth().alpha(if (enabled) 1f else 0.5f).clip(shape)
@@ -244,7 +262,17 @@ fun OutlineButton(text: String, onClick: () -> Unit, color: Color, modifier: Mod
             .padding(horizontal = 16.dp, vertical = 11.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = color, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, textAlign = TextAlign.Center)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (icon != null) AppIcon(icon, size = 16.dp, tint = color)
+            Text(text, color = color, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, textAlign = TextAlign.Center)
+            // React `.tbadge`: small red count pill after the text
+            if (badge > 0) {
+                Box(
+                    Modifier.defaultMinSize(minWidth = 18.dp).clip(CircleShape).background(errColor()).padding(horizontal = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) { Text(Fmt.bn(badge), color = Color.White, fontSize = 11.sp, lineHeight = 18.sp) }
+            }
+        }
     }
 }
 
