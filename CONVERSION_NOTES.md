@@ -23,6 +23,16 @@
 - একটি উপধাপ বড় হয়ে গেলে (যেমন একাধিক বড় স্ক্রিন) আরও ছোট করুন (২-খ-১, ২-খ-২)।
 - সম্পন্ন কাজ আবার লিখবেন না; আগের ফাইল দরকার হলে শুধু প্রয়োজনীয় অংশ পড়ুন।
 
+**টোকেন বাঁচানোর অতিরিক্ত নিয়ম (সব উপধাপে প্রযোজ্য):**
+- এই নোটের পুরোটা পড়বেন না — শুধু "কাজ ভাগ করার নিয়ম", "Supabase SQL" অংশ আর নিজের উপধাপের সারিটি পড়ুন। শেষ হলে পুরো ফাইল আবার না লিখে `str_replace` দিয়ে শুধু ওই সারির `⬜` বদলে ✅ ও এক লাইনের বিবরণ বসান।
+- React উৎস ফাইল পুরো পড়বেন না: সারিতে দেওয়া লাইন-রেঞ্জ ধরে শুধু সেটুকু পড়ুন (`sed -n 'ক,খp'` বা `view_range`)। রেঞ্জ আনুমানিক — ±২০ লাইন ধরে নিন।
+- `rizwantask_full_schema.sql` শুধু সেই উপধাপে পড়বেন যেখানে `[স্কিমা]` চিহ্ন আছে; তখনও পুরোটা নয়, শুধু সংশ্লিষ্ট টেবিল/RPC `grep` করে দেখুন।
+- বড় Kotlin ফাইল (`BooksTab.kt` ~৩০ KB, `BookDialogs.kt` ~২৬ KB, `AdminUi.kt`, `AdminScreen.kt`) পুরো আবার লিখবেন না — `str_replace` দিয়ে ছোট বদল করুন; নতুন লজিক নতুন ফাইলে রাখুন।
+- `task/guideImages.js` (~৩৯ KB) শুধু ছবির base64 ডেটা — কখনো খুলে পড়বেন না (দেখুন ৩-ঙ-১)।
+- `view/View.logic.js` (১৬৪ KB) আর ব্যবহৃত হয় না — কখনো পড়বেন না।
+- একটি উপধাপে একটির বেশি ফিচার বা ~৮ KB-এর বেশি React উৎস লাগলে থেমে আরও ভাঙুন (যেমন ৩-ক-২-ক, ৩-ক-২-খ) এবং এই তালিকায় নতুন সারি যোগ করুন।
+- `[স্কিমা]` = এই উপধাপে Supabase টেবিল/RPC লাগে।
+
 ## উপধাপ তালিকা
 
 | উপধাপ | কাজ | React উৎস | অবস্থা |
@@ -37,29 +47,77 @@
 | ২-জ-১ | Admin → Books: তালিকা, সার্চ/ফিল্টার/সাজানো, অগ্রগতি, লুকান/দেখান, ডিলিট, সিলেক্ট মোড (বাল্ক লুকান/দেখান/রেট/ডিলিট) | `admin/BooksTab.jsx` | ✅ `screens/admin/BooksTab.kt` (নতুন); `AdminUi.kt` (SmBtn "primary" টোন), `AdminViewModel.kt` (`booksFilter`), `AdminScreen.kt` (Books রুট) |
 | ২-জ-২ | Admin → Books: নতুন/এডিট ডায়ালগ (নাম, লেখক, কভার, পিডিএফ, রেট, মোট পেইজ, GitHub ফিল্ড, ফোল্ডার প্রিফিক্স) + JSON ইমপোর্ট (`parseImport`, ব্যাচ সংরক্ষণ) | `admin/BooksTab.jsx` (`blank/fromBook/save`, `parseImport/postBatch/doImport`) | ✅ `screens/admin/BookDialogs.kt` (নতুন: `BookDialog`, `ImportDialog`, `parseImport`, `postBatch`); `BooksTab.kt` ("নতুন কিতাব" / "JSON ইমপোর্ট" / "এডিট" বোতাম) |
 | ২-ঝ-১ | Admin → Books: GitHub সহায়ক (`gh`, `ghErr`, `countPages`, `dispatchBook`, `fetchRunState`) + পেইজ গণনা (কার্ড "পেইজ গণনা", "সব গণনা", বাল্ক গণনা, ডায়ালগের "গুনুন", সংরক্ষণ/ইমপোর্টের পর অটো গণনা) | `admin/helpers.js`, `admin/BooksTab.jsx` | ✅ `screens/admin/GitHubApi.kt` (নতুন); `BooksTab.kt`, `BookDialogs.kt` |
-| ২-ঝ-২ | Admin → Books: ছবি তৈরির workflow — `startRun`, `RunBox`, স্ট্যাটাস পোলিং + রান সফল হলে অটো গণনা, `runsLS` (সর্বশেষ রান), কার্ডের "ছবি তৈরি"/"আবার চেষ্টা", বাল্ক ছবি তৈরি ডায়ালগ, ফিল্টার running/done/failed, ডায়ালগের run/split চেকবক্স ও ইমপোর্টের run অপশন, ডিলিটে `runsLS` সাফ | `admin/BooksTab.jsx`, `admin/helpers.js` | ⬜ |
-| ২-ঞ | Admin → Dash ট্যাব | `admin/DashTab.jsx` | ⬜ |
-| ২-ট | Task — ফাঁকা স্ক্রিন কাঠামো | `Task.jsx` (কাঠামো মাত্র) | ⬜ |
-| ৩-ক | Task কাঠামো: নিচের নেভ বার (টাস্ক/পেমেন্ট/র‍্যাংক), ডেটা লোডার (নিজের প্রুফ, কিতাব, সেটিংস) | `Task.jsx`, `task/helpers.js` | ⬜ |
-| ৩-খ | Task → টাস্ক ট্যাব: ড্যাশবোর্ড, কিতাবের গ্রিড, "কাজ চলছে" লক ডায়ালগ (`book_lock_of`) | `task/Dashboard.jsx`, `task/BookGrid.jsx`, `task/Dialogs.jsx` | ⬜ |
-| ৩-গ | Task → পেমেন্ট ট্যাব: আয়ের হিসাব, পেমেন্ট রিকোয়েস্ট (`payments`) | `task/PayPane.jsx` | ⬜ |
-| ৩-ঘ | Task → র‍্যাংক ট্যাব (`leaderboard` RPC) | `task/RankPane.jsx` | ⬜ |
-| ৩-ঙ | Task → গাইড ডায়ালগ ও দৃশ্য | `task/GuideDialog.jsx`, `task/guideScenes.js`, `task/guideImages.js` | ⬜ |
-| ৩-চ | Profile → কাঠামো, ইউজার তথ্য, পেমেন্ট নাম্বার এডিট | `Profile.jsx` (উপরের অংশ) | ⬜ |
-| ৩-ছ | Profile → নোটিশ তালিকা, আয়ের সারসংক্ষেপ, কিতাব-অগ্রগতি (`ProgLine`) | `Profile.jsx` (বাকি অংশ) | ⬜ |
-| ৪-ক | View কাঠামো: প্রবেশদ্বার (কিতাব ও সেটিংস লোড), লোকাল সংরক্ষণ, কনফিগ, টোস্ট | `View.jsx` (১–১২৭), `view/config.js`, `view/storage.js`, `view/utils.js`, `view/toaster.js`, `view/hooks.js` | ⬜ |
-| ৪-খ | View → "কাজ চলছে" সংকেত (`book_lock_beat/release`) ও এপি আই চালু/বন্ধ চেক (`api_enabled`) | `View.jsx` (১২৮–১৫৮, ৯১৪ লাইনের আশপাশ) | ⬜ |
-| ৪-গ | View → ছবি: GitHub থেকে লোড, ক্যাশ, লোডিং শতাংশ, লাইটবক্স, মূল ছবি ডাউনলোড | `view/github.js`, `view/ImageLoader.jsx`, `view/Sprite.jsx` | ⬜ |
-| ৪-ঘ | View → পেইজ লোড/সেভ, খসড়া, শেষ অবস্থান (স্ক্রল/কার্সর) | `View.jsx` (পেইজ লোড, সেভ, খসড়া অংশ) | ⬜ |
-| ৪-ঙ | View → প্রুফড মালিকানা ও রিভিউ (`page_proofs`, `my_proof_count`, সংশোধিত পেইজ পুনরায় জমা) | `View.jsx` (প্রুফড মালিকানা অংশ) | ⬜ |
-| ৪-চ | View → এডিটর UI: কপি/পেস্ট, অটো হেডিং, কিবোর্ড শর্টকাট, হাইলাইট, ড্রপডাউন, রিপল | `view/Highlight.jsx`, `view/Dropdown.jsx`, `view/useRipple.js`, `View.jsx` (বাটন/শর্টকাট) | ⬜ |
-| ৪-ছ | View → Gemini API (এপি আই-১ ছবি→টেক্সট, এপি আই-২ প্রুফ, অটো OCR টগল) | `view/gemini.js`, `view/ApiDialogs.jsx` | ⬜ |
-| ৪-জ | View → TTS ১: ফোনের নিজস্ব TTS ইঞ্জিন, পড়ার সময় হাইলাইট | `view/TtsController.js`, `view/ttsEngines.js` (ফোনের অংশ) | ⬜ |
-| ৪-ঝ | View → TTS ২: Google অনলাইন অডিও, অতিরিক্ত সার্ভিস, সার্ভিস বাছাই ডায়ালগ | `view/ttsEngines.js`, `view/TtsDialog.jsx` | ⬜ |
-| ৪-ঞ | View → সেটিংস ডায়ালগ, Google Lens, শেষ জোড়া লাগানো ও পুরো পেইজ যাচাই | `view/SettingsDialog.jsx`, `View.jsx` (Lens অংশ) | ⬜ |
+| ২-ঝ-২-ক | Admin → Books: রান-অবস্থার মডেল — `runs` ম্যাপ, `runsLS` পড়া/লেখা, `isActiveRun`; ছোট `RunBox` কম্পোজেবল (এখনো কার্ডে বসবে না) → নতুন `RunStore.kt`, `RunBox.kt` | `admin/BooksTab.jsx` (১৩–৩৭, ৮৫–৯২), `admin/helpers.js` (৪৬–৪৯, ১২৮) | ⬜ |
+| ২-ঝ-২-খ | Admin → Books: `startRun` + `saveRun` (ViewModel-এ) ও কার্ডের "ছবি তৈরি"/"আবার চেষ্টা" বোতাম; কার্ডে `RunBox` বসানো | `admin/BooksTab.jsx` (১১২–১১৭, ১৬৩–১৭৪, ৫২৪–৫৩০) | ⬜ |
+| ২-ঝ-২-গ | Admin → Books: স্ট্যাটাস পোলিং (`schedulePoll`, `pollRuns`, ট্যাবে ফিরলে `visibilitychange`) + রান সফল হলে অটো গণনা (`autoCount` জোড়া) | `admin/BooksTab.jsx` (১০০–১৬০, ১১৮–১২৯) | ⬜ |
+| ২-ঝ-২-ঘ | Admin → Books: ফিল্টার running/done/failed (`FLT`, `fcount`, `matchF`) | `admin/BooksTab.jsx` (৩৫, ৪৪০–৪৫০) | ⬜ |
+| ২-ঝ-২-ঙ | Admin → Books: "ব্যর্থ সব আবার চেষ্টা" (`bRetryAll`) | `admin/BooksTab.jsx` (৪১৫–৪৩৫, ৪৮৪) | ⬜ |
+| ২-ঝ-২-চ | Admin → Books: বাল্ক ছবি তৈরি ডায়ালগ (`openRunDlg`, `doBulkRun`, `bRunDlg`) ও সিলেক্ট বারের "ছবি তৈরি" বোতাম | `admin/BooksTab.jsx` (৩৮০–৪০০, ৪৯৫, ৬১৫–৬২৫) | ⬜ |
+| ২-ঝ-২-ছ | Admin → Books: নতুন/এডিট ডায়ালগের run/split চেকবক্স + `save`-এর পর রান চালু (`BookDialogs.kt`-এ ছোট বদল) | `admin/BooksTab.jsx` (২৭৫–৩০৫) | ⬜ |
+| ২-ঝ-২-জ | Admin → Books: ইমপোর্টের run/split অপশন (`doImport`-এ `startRun`) + ডিলিটে `runsLS` সাফ (একক ও বাল্ক) | `admin/BooksTab.jsx` (২১৭–২৫৮, ৫৯১–৫৯২, ৩১০–৩২৭) | ⬜ |
+| ২-ঞ-১ | Admin → Dash: ডেটা লোড ও হিসাব (`load`, `useMemo`) — শুধু ViewModel/লজিক, UI নয় [স্কিমা] | `admin/DashTab.jsx` (১–৯৯) | ⬜ |
+| ২-ঞ-২ | Admin → Dash: প্রথম দুটি কার্ডের UI | `admin/DashTab.jsx` (১০০–১৩৪) | ⬜ |
+| ২-ঞ-৩ | Admin → Dash: শেষ কার্ড + `onReviewUser` সংযোগ; `AdminScreen.kt`-এ Dash রুট | `admin/DashTab.jsx` (১৩৫–১৫৮) | ⬜ |
+| ২-ট | Task — ফাঁকা স্ক্রিন কাঠামো | `Task.jsx` (কাঠামো মাত্র, ভেতরের লজিক নয়) | ⬜ |
+| ৩-ক-১ | Task: নিচের নেভ বার (টাস্ক/পেমেন্ট/র‍্যাংক), উপরের হেডার, ট্যাব বদল (`switchTab`, `repin`) | `Task.jsx` (২০০–২০৫, ৩১১–৩২৫, ৩৪৭–৩৫২), `task/helpers.js` | ⬜ |
+| ৩-ক-২ | Task: ডেটা লোডার — নিজের প্রুফ, কিতাব, সেটিংস (`fetchMine`, `loadCount/loadMoney/loadCounts/load`) [স্কিমা] | `Task.jsx` (২৫–৬৫, ৭৬–১৩৯) | ⬜ |
+| ৩-খ-১ | Task → টাস্ক ট্যাব: ড্যাশবোর্ড + আয়ের লক্ষ্য (`openGoal/saveGoal`, `GoalDialog`) | `task/Dashboard.jsx`, `task/Dialogs.jsx` (GoalDialog), `Task.jsx` (২৪০–২৪৭) | ⬜ |
+| ৩-খ-২ | Task → টাস্ক ট্যাব: কিতাবের গ্রিড/সার্চ + কিতাব খোলা ও "কাজ চলছে" লক ডায়ালগ (`book_lock_of`) [স্কিমা] | `task/BookGrid.jsx`, `Task.jsx` (২৪৮–২৭৭) | ⬜ |
+| ৩-খ-৩ | Task → নোটিশ লোড ও দেখানো (`loadNotices`, `NoticeDialog`, `onNoticeClosed`) + লগআউট [স্কিমা] | `task/Dialogs.jsx` (NoticeDialog), `Task.jsx` (১৭৫–১৯৯, ৩০৫) | ⬜ |
+| ৩-গ-১ | Task → পেমেন্ট ট্যাব: আয়ের হিসাব (`Skeleton`, `SegBar`, `Forecast`) | `task/PayPane.jsx` (১–৬৩) | ⬜ |
+| ৩-গ-২ | Task → পেমেন্ট ট্যাব: পেমেন্ট তালিকা ও রিকোয়েস্ট (`onRequest`, `onSend`, `RequestDialog`) [স্কিমা] | `task/PayPane.jsx` (৬৪–১৪৪), `task/Dialogs.jsx` (RequestDialog), `Task.jsx` (২৭৮–৩০৪) | ⬜ |
+| ৩-ঘ | Task → র‍্যাংক ট্যাব (`leaderboard` RPC, সময়-পর্ব বাছাই) [স্কিমা] | `task/RankPane.jsx`, `Task.jsx` (১৪০–১৭৪, ২০৫) | ⬜ |
+| ৩-ঙ-১ | Task → গাইড: ছবি-ডেটা — `guideImages.js` **পড়বেন না**; শুধু `IMG` কী-নাম তালিকা (`grep -o`) নিয়ে প্রতিটি base64 WebP ছবি আলাদা `res/drawable` ফাইলে নামিয়ে বসান (স্ক্রিপ্ট দিয়ে) | `task/guideImages.js` (শুধু ডেটা) | ⬜ |
+| ৩-ঙ-২ | Task → গাইড: অ্যানিমেশন ইঞ্জিন (`interpolate`, `spring`, `E`, `playScene`, `stopAnim`) ও `GUIDE` তালিকা + `GuideDialog` | `task/guideScenes.js` (৯–৩১, ২৫৭–৩০০), `task/GuideDialog.jsx` | ⬜ |
+| ৩-ঙ-৩ | Task → গাইড: `shotScene`/`touch` সহায়ক + দৃশ্য ১ `sceneWelcome` | `task/guideScenes.js` (৩২–১০৯) | ⬜ |
+| ৩-ঙ-৪ | Task → গাইড: দৃশ্য ২–৩ — `sceneBook`, `sceneEarn` | `task/guideScenes.js` (১১০–১৮৮) | ⬜ |
+| ৩-ঙ-৫ | Task → গাইড: দৃশ্য ৪–৫ — `sceneGoal`, `sceneCommunity` | `task/guideScenes.js` (১৮৯–২৫৬) | ⬜ |
+| ৩-চ-১ | Profile: কাঠামো, ইউজার তথ্য কার্ড, থিম/লগআউট/হোয়াটসঅ্যাপ বোতাম (PWA `onInstall` বাদ) [স্কিমা] | `Profile.jsx` (১–১৫০, ১৮৭–১৯৩) | ⬜ |
+| ৩-চ-২ | Profile: পেমেন্ট নাম্বার এডিট (`openEdit`, `saveEdit`) [স্কিমা] | `Profile.jsx` (১৯৪–২০৯) | ⬜ |
+| ৩-ছ-১ | Profile: নোটিশ তালিকা — "দেখা" মনে রাখা (`seenSet`, `unseenCount`), `openNotices`, `onNoticesBtn`, `onNoticeClose` [স্কিমা] | `Profile.jsx` (৫২–৫৫, ২১০–২২০) | ⬜ |
+| ৩-ছ-২ | Profile: আয়ের সারসংক্ষেপ (`useEffect` লোড ও সংশ্লিষ্ট UI) [স্কিমা] | `Profile.jsx` (১৬১–১৮৬ ও আয়ের JSX অংশ) | ⬜ |
+| ৩-ছ-৩ | Profile: কিতাব-অগ্রগতি `ProgLine` | `Profile.jsx` (১৫–৫০) | ⬜ |
+| ৪-ক-১ | View: কনফিগ — `loadCfg`, `saveCfgTo`, `keysFor`, `draftKey`, `repoPaths`, `API_DEF/API_NAME` → নতুন `core/ViewConfig.kt` | `view/config.js` (৯.৭ KB) | ⬜ |
+| ৪-ক-২ | View: লোকাল সংরক্ষণ (`storage.js` → SharedPreferences/DataStore; `mirror`, `restoreFromExt`, `requestPersist` ব্রাউজার-নির্ভর, বাদ/সরল) + `utils.js` (`markHeadings` বাদে — ওটা ৪-চ-২-তে) | `view/storage.js`, `view/utils.js` | ⬜ |
+| ৪-ক-৩ | View: টোস্ট (`toaster.js`, `Toasts.jsx`) — অ্যাপের `core/Toast.kt` দিয়ে মেলান; `hooks.js` (`useEvent` ইত্যাদি) Compose-এ লাগে না, শুধু নোট | `view/toaster.js`, `view/Toasts.jsx`, `view/hooks.js` | ⬜ |
+| ৪-ক-৪ | View: প্রবেশদ্বার — কিতাব ও সেটিংস লোড, `setCfg`, রুট/আর্গুমেন্ট (`wantPage`) | `View.jsx` (১১৬–১৩০, ১৬৩–১৭৪) | ⬜ |
+| ৪-খ-১ | View → "কাজ চলছে" সংকেত (`book_lock_beat/release`) [স্কিমা] | `View.jsx` (১২৮–১৫৮) | ⬜ |
+| ৪-খ-২ | View → এপি আই চালু/বন্ধ চেক (`api_enabled`, `refreshApiFlag`) [স্কিমা] | `View.jsx` (২০৭, ৯১২–৯২৪) | ⬜ |
+| ৪-গ-১ | View → ছবি: GitHub থেকে লোড + ছবির ক্যাশ (`createGithub`, `createImageCache`, `imgProg`) | `view/github.js`, `View.jsx` (২৩১–২৩৮) | ⬜ |
+| ৪-গ-২ | View → ছবি: লোডিং শতাংশ (`ImageLoader`) ও আইকন-স্প্রাইট (`Sprite` — `ui/IconData.kt`-এর সাথে মেলান) | `view/ImageLoader.jsx`, `view/Sprite.jsx` | ⬜ |
+| ৪-গ-৩ | View → ছবি: লাইটবক্স ও মূল ছবি ডাউনলোড (`closeLightbox`, `downloadCurrent`) | `View.jsx` (৩৩০–৩৬১) | ⬜ |
+| ৪-ঘ-১ | View → পেইজ লোড ও বদল (`loadDone`, `loadPage`, `goPage`) [স্কিমা] | `View.jsx` (৩০১–৩২৯, ৬৩৬–৭০৮) | ⬜ |
+| ৪-ঘ-২ | View → পেইজ সেভ (`saveText`) | `View.jsx` (৫৭৬–৬০৬) | ⬜ |
+| ৪-ঘ-৩ | View → খসড়া (`persistDrafts`, `stashDraft`) | `View.jsx` (১৭৫–২৩০, ২৭৮–২৮৯) | ⬜ |
+| ৪-ঘ-৪ | View → শেষ অবস্থান (স্ক্রল/কার্সর): `saveView`, `lazyView`, `flush` + পেইজ ছাড়ার সময় সংরক্ষণ | `View.jsx` (২৯০–২৯৯, ১০৯৪–১০৯৯) | ⬜ |
+| ৪-ঘ-৫ | View → `init` (পেইজ খোলার ধাপ, ~১২৫ লাইন) — ৪-ঘ-১…৪ শেষ হওয়ার পর জোড়া | `View.jsx` (৭১৫–৮৪০) | ⬜ |
+| ৪-ঙ-১ | View → প্রুফড মালিকানা: লোড/রিফ্রেশ (`fetchProofRows`, `refreshProofs`, `ownerOk`, `my_proof_count`) [স্কিমা] | `View.jsx` (৩০৭–৩১২, ৪৩৪–৪৮০) | ⬜ |
+| ৪-ঙ-২ | View → প্রুফড মালিকানা: প্রয়োগ ও "টেবিল নেই" বার্তা (`showNone`, `applyProofs`) [স্কিমা] | `View.jsx` (৪৮১–৫০০, ৭৭৭) | ⬜ |
+| ৪-ঙ-৩ | View → প্রুফড মালিকানা: `syncProofJson`, `setProofedFlag`, `toggleProofClick` [স্কিমা] | `View.jsx` (৫০১–৫৭৫, ১০৫৩–১০৮০) | ⬜ |
+| ৪-ঙ-৪ | View → "প্রুফ করে পরেরটায়" ও সংশোধিত পেইজ পুনরায় জমা (`proofAndNext`) [স্কিমা] | `View.jsx` (১০১৭–১০৫২) | ⬜ |
+| ৪-চ-১ | View → এডিটর: কপি/পেস্ট (`pasteClick`, `copyClick`, `aiCopy`) | `View.jsx` (৩৯৮–৪০৭, ৮৪১–৮৬৯) | ⬜ |
+| ৪-চ-২ | View → এডিটর: অটো হেডিং (`markHeadings` + `autoHead` টগল ও বাটন) | `view/utils.js` (`markHeadings`), `View.jsx` (৮২২, ৯০০, ১০১২, ১১৭৬–১১৭৮) | ⬜ |
+| ৪-চ-৩ | View → এডিটর: কিবোর্ড শর্টকাট (Ctrl+S ইত্যাদি `onKey`) | `View.jsx` (১০৮১–১০৮৮, ১১০০–১১৩৭) | ⬜ |
+| ৪-চ-৪ | View → এডিটর: ড্রপডাউন (`Dropdown`, `pageOptions`) | `view/Dropdown.jsx`, `View.jsx` (১১৩৮–১১৬০) | ⬜ |
+| ৪-চ-৫ | View → রিপল (`useRipple`) — Compose-এর Material ripple-ই যথেষ্ট কি না যাচাই; প্রায় কোনো কোড নয় | `view/useRipple.js` | ⬜ |
+| ৪-ছ-১ | View → Gemini: `callGemini` ক্লায়েন্ট + `imageB64` (ছবি→বেস৬৪) | `view/gemini.js`, `View.jsx` (৮৭০–৯০৬) | ⬜ |
+| ৪-ছ-২ | View → Gemini: `runApi` — এপি আই-১ (ছবি→টেক্সট) শাখা | `View.jsx` (৯২৫–১০১৬, শুধু এপি আই-১ অংশ) | ⬜ |
+| ৪-ছ-৩ | View → Gemini: `runApi` — এপি আই-২ (প্রুফ) শাখা + `ApiDialogs`, `openApiCfg` | `View.jsx` (৯০৭–৯১১, ৯২৫–১০১৬ বাকি অংশ), `view/ApiDialogs.jsx` | ⬜ |
+| ৪-ছ-৪ | View → অটো OCR টগল ও `maybeAutoOcr` | `View.jsx` (৬০৭–৬৩৫) | ⬜ |
+| ৪-জ-১ | View → TTS ১: `TtsController` কাঠামো/অবস্থা (`_set`, `pick`, `rate`, `stop`, `finish`, `pauseHere`) + View-এ `tts` তৈরি, `refreshVoices` | `view/TtsController.js` (১–৯০), `View.jsx` (২৩৯–২৪১, ৪০৯–৪৩৫) | ⬜ |
+| ৪-জ-২ | View → TTS ১: ফোনের নিজস্ব ইঞ্জিন — `hasTTS`, `TTS_LANG`, `pickVoice`, `voicesFor`, `voiceOptions`, `speak` | `view/ttsEngines.js` (৬–১১০, XENG বাদে), `view/TtsController.js` (১৩৮–১৯৭) | ⬜ |
+| ৪-জ-৩ | View → TTS ১: পড়ার সময় হাইলাইট (`hlShow`, `follow`, `markStale`, `Highlight`) | `view/Highlight.jsx`, `view/TtsController.js` (৩৫–৫১) | ⬜ |
+| ৪-জ-৪ | View → TTS ১: শুরু/ক্লিক (`startFrom`, `click`) | `view/TtsController.js` (২৬১–৩০২) | ⬜ |
+| ৪-ঝ-১ | View → TTS ২: Google অনলাইন অডিও — `gAudio`, `playG`, `G_RETRY`, `fetchAudio`, `tplUrl` | `view/TtsController.js` (১৪–১৬, ৮৬–১৩৭), `view/ttsEngines.js` (১১৩–১২৪) | ⬜ |
+| ৪-ঝ-২ | View → TTS ২: অতিরিক্ত সার্ভিস — `XENG`, `edgeGec`, `edgeAudio`, `xSrc`, `dropX`, `xFetch`, `playX` | `view/ttsEngines.js` (১৬–৭৫, ১২৫–১৯০), `view/TtsController.js` (১৯৮–২৬০) | ⬜ |
+| ৪-ঝ-৩ | View → TTS ২: সার্ভিস বাছাই ডায়ালগ (`TtsDialog`, `TS_BASE`, `TS_ORDER`, `tsMeta`, `tsValidate`, `askTts`) | `view/TtsDialog.jsx`, `view/ttsEngines.js` (৭৬–৯৫), `View.jsx` (৪০৯) | ⬜ |
+| ৪-ঞ-১ | View → সেটিংস ডায়ালগ (`SettingsDialog`, `normalizedPatch`, `openSettings`) | `view/SettingsDialog.jsx`, `View.jsx` (৭০৯–৭১৪) | ⬜ |
+| ৪-ঞ-২ | View → Google Lens (`openLens`) | `View.jsx` (৩৬২–৩৯৭) | ⬜ |
+| ৪-ঞ-৩ | View → শেষ জোড়া লাগানো: মূল JSX/লেআউট ও ৪-ঘ-৫ `init`-এর সংযোগ | `View.jsx` (১১৩৮–১২৭৪) | ⬜ |
+| ৪-ঞ-৪ | View → পুরো পেইজ যাচাই — **ব্যবহারকারীর কাজ**; এআই কোড পুরো পড়বে না, ব্যবহারকারী যে সমস্যা জানাবে শুধু সেটুকু ঠিক করবে | — | ⬜ |
 
-> **View-এর নোট:** React repo-তে `View.jsx` (১২৭৪ লাইন) ও `View.logic.js` (২২৮৪ লাইন) — দুটোতেই একই ধরনের অংশ আছে। কাজ শুরুর আগে নিশ্চিত হোন কোনটি বর্তমানে ব্যবহৃত (`View.jsx` কোনটি import করে) এবং শুধু সেটি থেকে অনুবাদ করুন; একই লজিক দুইবার লিখবেন না।
-> উপধাপের "লাইন/অংশ" উল্লেখ আনুমানিক — কাজ শুরুর সময় ফাইলে সেই অংশ খুঁজে নিন। কোনো উপধাপ বড় হলে আরও ভাঙুন (যেমন ৪-ঘ-১, ৪-ঘ-২)।
+> **View-এর নোট:** ব্যবহৃত ফাইল `View.jsx` (১২৭৪ লাইন, ৯৩ KB) — এর ২ নম্বর লাইনের মন্তব্যেই আছে "`View.logic.js` আর লাগে না"। তাই `View.logic.js` (২২৮৪ লাইন, ১৬৪ KB) কখনো পড়বেন না, `runLegacy`ও বাদ। একই লজিক দুইবার লিখবেন না।
+> উপধাপের লাইন-রেঞ্জ আনুমানিক (±২০ লাইন) — কাজ শুরুর সময় ফাইলে সেই ফাংশনের নাম খুঁজে নিন। কোনো উপধাপ তবুও বড় হলে আরও ভাঙুন (যেমন ৪-ঘ-৫-ক, ৪-ঘ-৫-খ)।
 
 ---
 
