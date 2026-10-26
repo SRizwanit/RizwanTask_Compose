@@ -88,6 +88,7 @@ object Sb {
         return when (val v = JSONTokener(s).nextValue()) {
             is JSONArray -> v
             is JSONObject -> JSONArray().put(v)
+            is Number, is String, is Boolean -> JSONArray().put(v)   // scalar RPC result (e.g. my_proof_count -> 5), like fetch().json()
             else -> JSONArray()
         }
     }
