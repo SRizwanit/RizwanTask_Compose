@@ -20,28 +20,8 @@ import com.srizwan.task.RizwanBackground
 import com.srizwan.task.core.Auth
 import com.srizwan.task.ui.AppCard
 import com.srizwan.task.ui.HintText
-import com.srizwan.task.ui.OutlineButton
-import com.srizwan.task.ui.errColor
 
-/**
- * Task page — intentionally BLANK until step 3 (dashboard, book grid, payment, rank).
- * It already runs the React guard (requireAuth: session, device, blocked) so login / signup / logout can be tested.
- * The logout button is temporary and is removed when the real Task screen arrives.
- */
-@Composable
-fun TaskScreen() {
-    LaunchedEffect(Unit) { Auth.requireAuth() }
-
-    RizwanBackground(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxSize().systemBarsPadding().padding(24.dp), contentAlignment = Alignment.BottomCenter) {
-            Box(Modifier.widthIn(max = 280.dp)) {
-                OutlineButton("লগআউট (সাময়িক)", onClick = { Auth.logout() }, color = errColor())
-            }
-        }
-    }
-}
-
-/** Profile / Support / Admin / View — filled in the next steps. */
+/** View (and any screen not written yet) — filled in the next steps. */
 @Composable
 fun PlaceholderScreen(title: String, note: String, adminOnly: Boolean = false) {
     LaunchedEffect(Unit) { Auth.requireAuth(admin = adminOnly) }
