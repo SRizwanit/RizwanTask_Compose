@@ -50,8 +50,15 @@ class DashState(private val vm: AdminViewModel) {
     /** User id whose one-click approval is running (React `busyUid`). */
     var busyUid by mutableStateOf(""); private set
 
+    // Keep the Kotlin method names used by the UI, but give their JVM names distinct
+    // from the generated property setters (setDP, setRF, setCrF).
+    @JvmName("updateDP")
     fun setDP(v: String) { dP = v }
+
+    @JvmName("updateRF")
     fun setRF(v: String) { rF = v }
+
+    @JvmName("updateCrF")
     fun setCrF(v: String) { crF = v }
 
     /** "হালনাগাদ: …" text, empty before the first load (React `dAt`). */
