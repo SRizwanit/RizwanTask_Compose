@@ -27,11 +27,11 @@
 
 | উপধাপ | কাজ | React উৎস | অবস্থা |
 |---|---|---|---|
-| ২-ক | Support — WebView (`http://rizwantask.vercel.app`) | `Support.jsx` | ⬜ |
-| ২-খ | Admin কাঠামো: গার্ড, ট্যাব বার, ডেটা লোডার | `Admin.jsx`, `admin/useAdminData.js`, `admin/ui.jsx`, `admin/helpers.js` | ⬜ |
-| ২-গ | Admin → Users ট্যাব (ব্লক, PIN/ডিভাইস রিসেট, মুছা) | `admin/UsersTab.jsx` | ⬜ |
-| ২-ঘ | Admin → Settings ট্যাব (রেট, ন্যূনতম পেমেন্ট, এপি আই সুইচ) | `admin/SettingsTab.jsx` | ⬜ |
-| ২-ঙ | Admin → Notice ও Log ট্যাব | `admin/NoticeTab.jsx`, `admin/LogTab.jsx` | ⬜ |
+| ২-ক | Support — WebView (`http://rizwantask.vercel.app`) | `Support.jsx` | ✅ |
+| ২-খ | Admin কাঠামো: গার্ড, ট্যাব বার, ডেটা লোডার | `Admin.jsx`, `admin/useAdminData.js`, `admin/ui.jsx`, `admin/helpers.js` | ✅ |
+| ২-গ | Admin → Users ট্যাব (ব্লক, PIN/ডিভাইস রিসেট, মুছা) | `admin/UsersTab.jsx` | ✅ |
+| ২-ঘ | Admin → Settings ট্যাব (রেট, ন্যূনতম পেমেন্ট, এপি আই সুইচ) | `admin/SettingsTab.jsx` | ✅ |
+| ২-ঙ | Admin → Notice ও Log ট্যাব | `admin/NoticeTab.jsx`, `admin/LogTab.jsx` | ✅ |
 | ২-চ | Admin → Pay ট্যাব (পেমেন্ট পরিশোধ/বাতিল) | `admin/PayTab.jsx` | ⬜ |
 | ২-ছ | Admin → Review ট্যাব (অনুমোদন/সংশোধন) | `admin/ReviewTab.jsx` | ⬜ |
 | ২-জ | Admin → Books ট্যাব (কিতাব CRUD, রেট) | `admin/BooksTab.jsx` | ⬜ |
