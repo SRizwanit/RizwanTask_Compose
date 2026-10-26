@@ -32,10 +32,12 @@
 | ২-গ | Admin → Users ট্যাব (ব্লক, PIN/ডিভাইস রিসেট, মুছা) | `admin/UsersTab.jsx` | ✅ |
 | ২-ঘ | Admin → Settings ট্যাব (রেট, ন্যূনতম পেমেন্ট, এপি আই সুইচ) | `admin/SettingsTab.jsx` | ✅ |
 | ২-ঙ | Admin → Notice ও Log ট্যাব | `admin/NoticeTab.jsx`, `admin/LogTab.jsx` | ✅ |
-| ২-চ | Admin → Pay ট্যাব (পেমেন্ট পরিশোধ/বাতিল) | `admin/PayTab.jsx` | ⬜ |
-| ২-ছ | Admin → Review ট্যাব (অনুমোদন/সংশোধন) | `admin/ReviewTab.jsx` | ⬜ |
-| ২-জ | Admin → Books ট্যাব (কিতাব CRUD, রেট) | `admin/BooksTab.jsx` | ⬜ |
-| ২-ঝ | Admin → Books: GitHub Actions / ছবি তৈরি | `admin/BooksTab.jsx`, `admin/helpers.js` | ⬜ |
+| ২-চ | Admin → Pay ট্যাব (পেমেন্ট পরিশোধ/বাতিল) | `admin/PayTab.jsx` | ✅ `screens/admin/PayTab.kt` (নতুন); `AdminUi.kt` (SmBtn-এ `enabled`/`compact`, AskDialog-এ লেবেল ফিল্ডের উপরে), `AdminViewModel.kt` (`payFilter`), `AdminScreen.kt` (Pay রুট), `core/Intents.kt` (`copyText`) |
+| ২-ছ | Admin → Review ট্যাব (অনুমোদন/সংশোধন) | `admin/ReviewTab.jsx` | ✅ `screens/admin/ReviewTab.kt` (নতুন); `AdminUi.kt` (SmBtn-এ "ok" টোন), `AdminScreen.kt` (Review রুট), `PayTab.kt` (বোতামে "ok" টোন) |
+| ২-জ-১ | Admin → Books: তালিকা, সার্চ/ফিল্টার/সাজানো, অগ্রগতি, লুকান/দেখান, ডিলিট, সিলেক্ট মোড (বাল্ক লুকান/দেখান/রেট/ডিলিট) | `admin/BooksTab.jsx` | ✅ `screens/admin/BooksTab.kt` (নতুন); `AdminUi.kt` (SmBtn "primary" টোন), `AdminViewModel.kt` (`booksFilter`), `AdminScreen.kt` (Books রুট) |
+| ২-জ-২ | Admin → Books: নতুন/এডিট ডায়ালগ (নাম, লেখক, কভার, পিডিএফ, রেট, মোট পেইজ, GitHub ফিল্ড, ফোল্ডার প্রিফিক্স) + JSON ইমপোর্ট (`parseImport`, ব্যাচ সংরক্ষণ) | `admin/BooksTab.jsx` (`blank/fromBook/save`, `parseImport/postBatch/doImport`) | ✅ `screens/admin/BookDialogs.kt` (নতুন: `BookDialog`, `ImportDialog`, `parseImport`, `postBatch`); `BooksTab.kt` ("নতুন কিতাব" / "JSON ইমপোর্ট" / "এডিট" বোতাম) |
+| ২-ঝ-১ | Admin → Books: GitHub সহায়ক (`gh`, `ghErr`, `countPages`, `dispatchBook`, `fetchRunState`) + পেইজ গণনা (কার্ড "পেইজ গণনা", "সব গণনা", বাল্ক গণনা, ডায়ালগের "গুনুন", সংরক্ষণ/ইমপোর্টের পর অটো গণনা) | `admin/helpers.js`, `admin/BooksTab.jsx` | ✅ `screens/admin/GitHubApi.kt` (নতুন); `BooksTab.kt`, `BookDialogs.kt` |
+| ২-ঝ-২ | Admin → Books: ছবি তৈরির workflow — `startRun`, `RunBox`, স্ট্যাটাস পোলিং + রান সফল হলে অটো গণনা, `runsLS` (সর্বশেষ রান), কার্ডের "ছবি তৈরি"/"আবার চেষ্টা", বাল্ক ছবি তৈরি ডায়ালগ, ফিল্টার running/done/failed, ডায়ালগের run/split চেকবক্স ও ইমপোর্টের run অপশন, ডিলিটে `runsLS` সাফ | `admin/BooksTab.jsx`, `admin/helpers.js` | ⬜ |
 | ২-ঞ | Admin → Dash ট্যাব | `admin/DashTab.jsx` | ⬜ |
 | ২-ট | Task — ফাঁকা স্ক্রিন কাঠামো | `Task.jsx` (কাঠামো মাত্র) | ⬜ |
 | ৩-ক | Task কাঠামো: নিচের নেভ বার (টাস্ক/পেমেন্ট/র‍্যাংক), ডেটা লোডার (নিজের প্রুফ, কিতাব, সেটিংস) | `Task.jsx`, `task/helpers.js` | ⬜ |
