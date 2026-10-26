@@ -57,7 +57,7 @@ import org.json.JSONTokener
  * React admin/BooksTab.jsx — part 2-জ-২: new / edit book dialog and JSON import.
  * 2-ঝ-১ added: "গুনুন" (page count) button, the automatic page count after saving / importing and the import's "count" option.
  * 2-ঝ-২-ছ added: "ছবি তৈরির workflow" + split checkboxes with the output-folder hint, and the workflow start after saving.
- * Not here yet (2-ঝ-২-জ): the import's "run workflow" option.
+ * 2-ঝ-২-জ added: the import dialog's "run workflow" + split options (confirm, token check, total_pages dropped for rows with a PDF link, `vm.startRun` per imported book).
  */
 
 // ---------------------------------------------------------------------------
@@ -334,7 +334,7 @@ private fun fileName(ctx: Context, uri: Uri): String = try {
 } catch (e: Exception) { uri.lastPathSegment.orEmpty() }
 
 @Composable
-fun ImportDialog(vm: AdminViewModel, onClose: () -> Unit) {
+fun ImportDialog(vm: AdminViewModel, ask: AskController, onClose: () -> Unit) {
     val ctx = LocalContext.current
     val cs = MaterialTheme.colorScheme
     var rows by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
@@ -344,6 +344,8 @@ fun ImportDialog(vm: AdminViewModel, onClose: () -> Unit) {
     var prog by remember { mutableStateOf("") }
     var file by remember { mutableStateOf("") }
     var impCount by remember { mutableStateOf(true) }
+    var impRun by remember { mutableStateOf(false) }      // React impRun: workflow for every imported book
+    var impSplit by remember { mutableStateOf(false) }    // React impSplit: left-right split
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
@@ -362,9 +364,20 @@ fun ImportDialog(vm: AdminViewModel, onClose: () -> Unit) {
 
     fun doImport() {
         if (rows.isEmpty()) return
-        val toSave = rows
-        err = ""; busy = true
+        val wantRun = impRun; val split = impSplit
+        val src = rows
         AppScope.scope.launch {
+            if (wantRun) {
+                if (ghTok(vm.S).isEmpty()) { err = "workflow চালাতে সেটিংস ট্যাবে GitHub Token দিন"; return@launch }
+                val n = src.count { !it.str("pdf_url").isNullOrEmpty() }
+                if (!ask.confirm("${Fmt.bn(n)}টি কিতাবের জন্য আলাদা workflow চালু হবে। এটি ভারী হতে পারে। নিশ্চিত?")) return@launch
+            }
+            err = ""; busy = true; setSplitPref(split)
+            // with image creation the JSON total_pages is ignored for books that have a PDF link:
+            // they show on the Task page once the images are made and counted
+            val toSave = if (wantRun) src.map { r ->
+                if (!r.str("pdf_url").isNullOrEmpty()) JSONObject(r.toString()).also { it.remove("total_pages") } else r
+            } else src
             var added = 0
             try {
                 var i = 0
@@ -394,7 +407,13 @@ fun ImportDialog(vm: AdminViewModel, onClose: () -> Unit) {
                 }
                 if (fresh.isNotEmpty()) AppToast.show("স্বয়ংক্রিয় গণনা: ${Fmt.bn(ok)}টি কিতাবের পেইজ সংখ্যা পাওয়া গেছে")
             }
-            // 2-ঝ-২: the workflow run for the freshly imported books ("run" option) goes here.
+            if (wantRun) {
+                for (i in fresh.indices) {
+                    if (fresh[i].str("pdf_url").isNullOrEmpty()) continue
+                    prog = "workflow চালু ${Fmt.bn(i + 1)}/${Fmt.bn(fresh.size)}"
+                    vm.startRun(fresh[i], split)
+                }
+            }
             busy = false; prog = ""; onClose()
         }
     }
@@ -430,6 +449,8 @@ fun ImportDialog(vm: AdminViewModel, onClose: () -> Unit) {
                     )
                 }
                 ChkRow(impCount, { impCount = it }, "ইমপোর্টের পর স্বয়ংক্রিয়ভাবে মোট পেইজ গুনুন (GitHub ফোল্ডারে ছবি থাকলে)", enabled = !busy)
+                ChkRow(impRun, { impRun = it }, "ইমপোর্টের পর প্রতিটি কিতাবের জন্য পিডিএফ থেকে ছবি তৈরির workflow চালান (ভারী — সাবধানে)", enabled = !busy)
+                if (impRun) ChkRow(impSplit, { impSplit = it }, "প্রতিটি পেইজ বাম-ডান দুই ভাগ (split) করুন", enabled = !busy)
                 if (prog.isNotEmpty()) HintText(prog)
                 if (err.isNotEmpty()) ErrText(err)
             }

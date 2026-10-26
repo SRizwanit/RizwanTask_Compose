@@ -90,6 +90,7 @@ fun AdminScreen(vm: AdminViewModel = viewModel()) {
                         ) {
                             val u = me
                             when {
+                                vm.tab == "Dash" -> DashTab(vm, ask, vm.openKey("Dash"), onReviewUser = { vm.reviewUser(it, true) })
                                 vm.tab == "Users" && u != null -> UsersTab(vm, u, ask, vm.openKey("Users"))
                                 vm.tab == "Set" -> SettingsTab(vm, vm.openKey("Set"))
                                 vm.tab == "Notice" -> NoticeTab(vm, ask, vm.openKey("Notice"))
@@ -180,7 +181,7 @@ private fun AdminTabBar(vm: AdminViewModel, badges: Map<String, Int>) {
     }
 }
 
-/** The tabs themselves arrive step by step (২-গ … ২-ঞ); until then each shows a placeholder + a data check. */
+/** Fallback placeholder + data check. Every tab (২-গ … ২-ঞ) has its own route above, so this is not reached any more. */
 @Composable
 private fun TabContent(vm: AdminViewModel, key: String) {
     val t = TABS.first { it.key == key }

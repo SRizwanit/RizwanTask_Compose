@@ -71,7 +71,7 @@ object RunStore {
         version++
     }
 
-    /** Forget a book's saved run (used on delete in 2-ঝ-২-জ). */
+    /** Forget a book's saved run (called on single and bulk delete, 2-ঝ-২-জ). */
     fun clearLocal(bookId: String) {
         if (runsLS.remove(bookId) != null) { writeRunsLS(runsLS); version++ }
         runs.remove(bookId)

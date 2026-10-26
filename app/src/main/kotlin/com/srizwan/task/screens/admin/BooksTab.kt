@@ -88,7 +88,7 @@ private fun matchF(k: String, v: BkView): Boolean =
 /**
  * React admin/BooksTab.jsx — parts 2-জ-১ (list, search / filter / sort, per-book progress, hide / show, delete,
  * selection mode with bulk hide / show / rate / delete) and 2-জ-২ (header buttons + the dialogs in BookDialogs.kt).
- * 2-ঝ-১: page counting. 2-ঝ-২-ক/খ: run box + start run. 2-ঝ-২-গ: status polling + automatic count after a successful run (RunPoller.kt). Still to come (2-ঝ-২-ঘ…): run filter counts check, retry-all, bulk run, run options in dialogs / import.
+ * 2-ঝ-১: page counting. 2-ঝ-২-ক/খ: run box + start run. 2-ঝ-২-গ: status polling + automatic count after a successful run (RunPoller.kt). 2-ঝ-২-জ: import run options + `RunStore.clearLocal` on single / bulk delete (React `delete runsLS[id]`).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -207,6 +207,7 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
             if (!ask.confirm("\"${bk.str("name").orEmpty()}\" কিতাবটি ডিলিট করবেন?")) return@launch
             try {
                 Sb.del("books?id=eq.${enc(bk.idStr())}")
+                RunStore.clearLocal(bk.idStr())   // React: delete runsLS[id] + runs[id]
                 toast("কিতাব ডিলিট হয়েছে"); reload()
             } catch (e: CancellationException) { throw e } catch (e: Exception) { toast(e.message.orEmpty(), true) }
         }
@@ -266,7 +267,7 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
             var ok = 0; var fail = 0; var lastErr = ""
             for (i in list.indices) {
                 toast("ডিলিট ${Fmt.bn(i + 1)}/${Fmt.bn(list.size)} — ${list[i].str("name").orEmpty()}")
-                try { Sb.del("books?id=eq.${enc(list[i].idStr())}"); ok++ }
+                try { Sb.del("books?id=eq.${enc(list[i].idStr())}"); RunStore.clearLocal(list[i].idStr()); ok++ }
                 catch (e: CancellationException) { throw e } catch (e: Exception) { fail++; lastErr = e.message.orEmpty() }
             }
             bulkBusy = false; exitSel()
@@ -528,7 +529,7 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
 
     // new / edit book dialog and JSON import (BookDialogs.kt)
     if (bookDlg) androidx.compose.runtime.key(editBook?.idStr() ?: "new") { BookDialog(vm, editBook, onClose = { bookDlg = false }) }
-    if (impOpen) ImportDialog(vm, onClose = { impOpen = false })
+    if (impOpen) ImportDialog(vm, ask, onClose = { impOpen = false })
 
     // bulk image-creation / retry dialog (React bRunDlg)
     if (runOpen) {

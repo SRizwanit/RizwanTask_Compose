@@ -116,6 +116,9 @@ class AdminViewModel : ViewModel() {
 
     /** Status polling of the image-creation runs (React `schedulePoll` / `pollRuns`) — see RunPoller.kt. */
     val poller = RunPoller(this, viewModelScope)
+
+    /** Dash tab data + calculations (2-ঞ-১; UI comes in 2-ঞ-২ / 2-ঞ-৩). Kept here so the filters survive tab switches. */
+    val dash = DashState(this)
     fun schedulePoll(ms: Long) = poller.schedule(ms)
 
     /** Starts the image-creation workflow for a book. Returns true when it started. */
