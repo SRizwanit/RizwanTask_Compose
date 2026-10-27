@@ -122,7 +122,7 @@ object ViewUtils {
     private val HEAD_END = Regex("[।.?!,;][\"”’'\\)\\]]*\$")
     private val DASH_END = Regex("[–—\\-]\$")
     private val ANY_DIGIT = Regex("[\\d\\u09E6-\\u09EF]")
-    private val WS = Regex("\\s+")
+    private val WS_SPLIT = Regex("\\s+")
 
     /** React `isHeading(line, prev, first)` — does [line] look like a heading (short, no sentence end, after a finished sentence / blank line / at the top)? */
     fun isHeading(line: String, prev: String?, first: Boolean): Boolean {
@@ -132,9 +132,9 @@ object ViewUtils {
         if (HEAD_1.containsMatchIn(t)) return false                       // already marked
         if (HEAD_END.containsMatchIn(t)) return false
         if (KEY_RE.containsMatchIn(t)) return true
-        if (t.length > 50 || t.split(WS).size > 8) return false
+        if (t.length > 50 || t.split(WS_SPLIT).size > 8) return false
         if (DASH_END.containsMatchIn(t) && !ANY_DIGIT.containsMatchIn(t)) return false
-        if (t.endsWith(":") && t.split(WS).size > 4) return false
+        if (t.endsWith(":") && t.split(WS_SPLIT).size > 4) return false
         val p = (prev ?: "").trim()
         return first || p.isEmpty() || SENT_RE.containsMatchIn(p)
     }
