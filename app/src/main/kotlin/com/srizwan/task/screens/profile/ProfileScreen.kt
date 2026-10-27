@@ -1,6 +1,5 @@
 package com.srizwan.task.screens.profile
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -34,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,6 +57,7 @@ import com.srizwan.task.core.ThemeMode
 import com.srizwan.task.core.ThemeStore
 import com.srizwan.task.core.enc
 import com.srizwan.task.core.jsonOf
+import com.srizwan.task.core.openUrl
 import com.srizwan.task.core.openWhatsApp
 import com.srizwan.task.core.str
 import com.srizwan.task.nav.Nav
@@ -69,7 +68,7 @@ import com.srizwan.task.screens.task.TaskBottomNav
 import com.srizwan.task.screens.task.TaskData
 import com.srizwan.task.ui.AppCard
 import com.srizwan.task.ui.AppIcon
-import com.srizwan.task.ui.AppMark
+import com.srizwan.task.ui.AppLogo
 import com.srizwan.task.ui.BlockButton
 import com.srizwan.task.ui.FieldLabel
 import com.srizwan.task.ui.OutlineButton
@@ -241,7 +240,9 @@ fun ProfileScreen() {
                             onLogout = { logout() },
                             onGuide = { Nav.go("task#guide") },
                             onTicket = { Nav.go("support") },
-                            onWhatsApp = { whatsapp() }
+                            onWhatsApp = { whatsapp() },
+                            onPrivacy = { openUrl(ctx, PRIVACY_POLICY_URL) },
+                            onDeleteAccount = { Nav.go("deleteaccount") }
                         )
                     }
                 }
@@ -273,7 +274,7 @@ private fun ProfileHeader(myCount: Int?, isAdmin: Boolean, onAdmin: () -> Unit, 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Image(rememberVectorPainter(AppMark), contentDescription = null, modifier = Modifier.size(30.dp))
+        AppLogo(size = 30.dp)
         Text(
             "প্রোফাইল", color = cs.onBackground, fontSize = 17.sp, fontWeight = FontWeight.Bold,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
@@ -291,7 +292,8 @@ private fun ProfileHeader(myCount: Int?, isAdmin: Boolean, onAdmin: () -> Unit, 
 @Composable
 private fun ProfileCard(
     data: TaskData, isAdmin: Boolean,
-    onEdit: () -> Unit, onNotices: () -> Unit, onLogout: () -> Unit, onGuide: () -> Unit, onTicket: () -> Unit, onWhatsApp: () -> Unit
+    onEdit: () -> Unit, onNotices: () -> Unit, onLogout: () -> Unit, onGuide: () -> Unit, onTicket: () -> Unit, onWhatsApp: () -> Unit,
+    onPrivacy: () -> Unit, onDeleteAccount: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
     val me = data.me
@@ -355,6 +357,9 @@ private fun ProfileCard(
                 // (the PWA install button is not needed in a native app)
                 OutlineButton("টিকেট খুলুন", onClick = onTicket, color = cs.primary, icon = "ticket")
                 OutlineButton("হোয়াটসঅ্যাপে যোগাযোগ করুন", onClick = onWhatsApp, color = waColor(), icon = "whatsapp")
+                // privacy policy (opens in the browser) + the "অ্যাকাউন্ট মুছুন" screen
+                OutlineButton("প্রাইভেসি পলিসি", onClick = onPrivacy, color = cs.primary, icon = "shield")
+                OutlineButton("অ্যাকাউন্ট মুছুন", onClick = onDeleteAccount, color = errColor(), icon = "trash")
             }
         }
     }
