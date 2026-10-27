@@ -9,7 +9,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.material3.RippleAlpha
+import androidx.compose.material.ripple.RippleAlpha
 import com.srizwan.task.LocalAppDark
 
 /**
