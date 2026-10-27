@@ -17,13 +17,13 @@ import androidx.navigation.navArgument
 import com.srizwan.task.core.Auth
 import com.srizwan.task.core.Session
 import com.srizwan.task.screens.LoginScreen
-import com.srizwan.task.screens.PlaceholderScreen
 import com.srizwan.task.screens.admin.AdminScreen
 import com.srizwan.task.screens.profile.ProfileScreen
 import com.srizwan.task.screens.SignupScreen
 import com.srizwan.task.screens.SplashScreen
 import com.srizwan.task.screens.SupportScreen
 import com.srizwan.task.screens.task.TaskScreen
+import com.srizwan.task.screens.view.ViewScreen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -121,6 +121,13 @@ fun AppNav() {
                 navArgument("book") { type = NavType.StringType; nullable = true; defaultValue = null },
                 navArgument("page") { type = NavType.StringType; nullable = true; defaultValue = null }
             )
-        ) { key(reload) { PlaceholderScreen("পেইজ দেখুন", "ধাপ ৪-এ আসবে") } }
+        ) { entry ->
+            key(reload) {
+                ViewScreen(
+                    bookId = entry.arguments?.getString("book"),
+                    wantPage = entry.arguments?.getString("page")
+                )
+            }
+        }
     }
 }
