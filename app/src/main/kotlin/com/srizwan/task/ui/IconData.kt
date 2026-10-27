@@ -5,6 +5,9 @@ package com.srizwan.task.ui
 internal class IconPath(val d: String, val fill: Boolean = false)
 
 internal val ICON_PATHS: Map<String, List<IconPath>> = mapOf(
+    // added for the exit dialog (Feather "star" and "share-2")
+    "star" to listOf(IconPath("M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z")),
+    "share" to listOf(IconPath("M15 5a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"), IconPath("M3 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"), IconPath("M15 19a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"), IconPath("M8.59 13.51l6.83 3.98"), IconPath("M15.41 6.51l-6.82 3.98")),
     "book" to listOf(IconPath("M4 19.5A2.5 2.5 0 0 1 6.5 17H20"), IconPath("M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z")),
     "user" to listOf(IconPath("M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"), IconPath("M8 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0")),
     "users" to listOf(IconPath("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"), IconPath("M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"), IconPath("M23 21v-2a4 4 0 0 0-3-3.87"), IconPath("M16 3.13a4 4 0 0 1 0 7.75")),
