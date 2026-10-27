@@ -1000,7 +1000,16 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
             else "AI প্রম্পট কপি হয়েছে (পেইজ ${im.stem}) — AI চ্যাটে পেস্ট করুন",
             priv, 4500
         )
+        // after the copy: ask whether to open the AI site in the browser (unless "আর দেখাবে না" was chosen)
+        if (Prefs.getString(AI_ASK_OFF_KEY) != "1") aiAsk = true
     }
+
+    /** "Open in browser?" dialog after [aiCopy] (shown by `ViewAiOpenDialog`). */
+    var aiAsk by mutableStateOf(false); private set
+    /** "না" / outside tap / back — just close. */
+    fun aiAskDismiss() { aiAsk = false }
+    /** "আর দেখাবে না" — remember on this device: from now on the button only copies. */
+    fun aiAskNever() { Prefs.putString(AI_ASK_OFF_KEY, "1"); aiAsk = false }
 
     // ---------------- auto heading switch (4-চ-২) ----------------
 
@@ -1081,3 +1090,8 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
         env.toaster.toast("সব পেইজ প্রুফড!")
     }
 }
+
+/** Prefs key: the user chose "আর দেখাবে না" on the AI prompt browser dialog. */
+private const val AI_ASK_OFF_KEY = "view_ai_open_ask_off"
+/** The AI chat opened by "হ্যাঁ" — the copied prompt is pasted there. */
+const val AI_CHAT_URL = "https://www.meta.ai/"

@@ -218,6 +218,7 @@ fun ViewPage(env: ViewEnv, wantPage: String?) {
     // download button: React `imagesRef.current[curRef.current].name` (null when no page is open)
     ApiDialogs(env, api, st.images.getOrNull(st.cur)?.stem)     // React `<ApiDialogs …/>` (4-chha-3)
     TtsDialog(env, tts, picker)                                 // React `<TtsDialog … />` (4-jha-3)
+    ViewAiOpenDialog(st)                                        // after the AI prompt copy: open the AI chat in the browser?
     ViewConfirmDialog(confirmState)                             // React `window.confirm` (4-nya-3-ngo)
     SettingsDialog(env, tts, settings)                          // React `<SettingsDialog … />` (4-nya-1) — admin only
     ViewLightbox(st.lightbox) { scope.launch { env.downloadCurrent(context, st.currentName ?: st.lightbox.title.ifEmpty { null }) } }
