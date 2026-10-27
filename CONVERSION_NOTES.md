@@ -123,6 +123,8 @@
 
 | ৪-ঞ-৪ (পরের সংশোধন) | View: স্ট্যাটাস/নেভিগেশন বার ওভারল্যাপ ও কীবোর্ড ঢেকে দেওয়া; Task-এ back চাপলে কাস্টম বের-হওয়া ডায়ালগ | — | ✅ `screens/view/ViewScreen.kt` (রুটে `systemBarsPadding().imePadding()` + `viewColors().bg` ব্যাকগ্রাউন্ড); `screens/task/ExitDialog.kt` (নতুন: শুভেচ্ছা, প্রশ্ন, "রেটিং দিন" (Play Store লিংক), "শেয়ার করুন" (শেয়ার শিট), "হ্যাঁ, বের হতে চাই।" (`finish()`), বন্ধ বোতাম — সব আইকন ভেক্টর); `screens/task/TaskScreen.kt` (`BackHandler` → `exitOpen`); `ui/IconData.kt` (নতুন ভেক্টর `star`, `share`) |
 
+| ৪-ঞ-৪ (AI প্রম্পট ডায়ালগ) | View: AI প্রম্পট কপি বাটনের পর "আপনি কি ব্রাউজারে ওপেন করতে চান?" কাস্টম ডায়ালগ | — | ✅ `screens/view/ViewAiOpenDialog.kt` (নতুন: হ্যাঁ → `AI_CHAT_URL` ব্রাউজারে; না → বন্ধ; আর দেখাবে না → Prefs `view_ai_open_ask_off`=1, এরপর শুধু কপি — সব আইকন ভেক্টর); `ViewPageState.kt` (`aiAsk`, `aiAskDismiss()`, `aiAskNever()`, `aiCopy` কপির পর ডায়ালগ খোলে); `ViewScreen.kt` (ডায়ালগ জোড়া) |
+
 > **View-এর নোট:** ব্যবহৃত ফাইল `View.jsx` (১২৭৪ লাইন, ৯৩ KB) — এর ২ নম্বর লাইনের মন্তব্যেই আছে "`View.logic.js` আর লাগে না"। তাই `View.logic.js` (২২৮৪ লাইন, ১৬৪ KB) কখনো পড়বেন না, `runLegacy`ও বাদ। একই লজিক দুইবার লিখবেন না।
 > উপধাপের লাইন-রেঞ্জ আনুমানিক (±২০ লাইন) — কাজ শুরুর সময় ফাইলে সেই ফাংশনের নাম খুঁজে নিন। কোনো উপধাপ তবুও বড় হলে আরও ভাঙুন (যেমন ৪-ঘ-৫-ক, ৪-ঘ-৫-খ)।
 
