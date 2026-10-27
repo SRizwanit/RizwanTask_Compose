@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.srizwan.task.core.openBrowserApp
 import com.srizwan.task.core.openUrl
 import com.srizwan.task.ui.AppIcon
 import com.srizwan.task.ui.ViewIcon
@@ -37,6 +38,7 @@ import com.srizwan.task.ui.viewColors
 /**
  * Shown right after the AI prompt button copied the prompt: "আপনি কি ব্রাউজারে ওপেন করতে চান?".
  *  - হ্যাঁ: opens the AI chat ([AI_CHAT_URL]) in the browser;
+ *  - ব্রাউজার ওপেন করুন: opens only the phone's browser app (no link, no text);
  *  - না: just closes the dialog;
  *  - আর দেখাবে না: closes it and, from now on, the button only copies.
  * Same card look as the other View dialogs; every icon is a vector.
@@ -67,6 +69,12 @@ fun ViewAiOpenDialog(st: ViewPageState) {
             AiAction("হ্যাঁ (ব্রাউজারে ওপেন হবে)", { AppIcon("send", size = 18.dp, tint = c.priFg) }, filled = true) {
                 st.aiAskDismiss()
                 openUrl(ctx, AI_CHAT_URL)
+            }
+            Spacer(Modifier.height(8.dp))
+            // only the browser app, no link / no text
+            AiAction("ব্রাউজার ওপেন করুন", { ViewIcon("globe", size = 18.dp, tint = c.fg) }, filled = false) {
+                st.aiAskDismiss()
+                openBrowserApp(ctx)
             }
             Spacer(Modifier.height(8.dp))
             AiAction("না (ডায়লগ dismiss)", { AppIcon("x", size = 18.dp, tint = c.fg) }, filled = false) { st.aiAskDismiss() }
