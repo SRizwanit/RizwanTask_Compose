@@ -155,12 +155,8 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
     val qn = f.query.trim().lowercase()
     val searched = books.filter { qn.isEmpty() || it.str("name").orEmpty().lowercase().contains(qn) || it.str("author").orEmpty().lowercase().contains(qn) }
     val fcount = FLT.associate { (k, _) -> k to searched.count { matchF(k, st(it)) } }
-    val idx = books.withIndex().associate { it.value.idStr() to it.index }
-    // byNew: newest first when both have created_at, else the order they came in
-    val byNew = Comparator<JSONObject> { a, b ->
-        val ca = a.str("created_at"); val cb = b.str("created_at")
-        if (ca != null && cb != null) cb.compareTo(ca) else (idx[a.idStr()] ?: 0) - (idx[b.idStr()] ?: 0)
-    }
+    // byNew: newest first (created_at desc); same time -> name, then id, so the order is always the same
+    val byNew: Comparator<JSONObject> = com.srizwan.task.core.BookOrder.newestFirst
     fun progOf(b: JSONObject): Double? { val v = st(b); return if (v.tot != 0.0) v.x.n / v.tot else null }
     fun leftOf(b: JSONObject): Double? { val v = st(b); return if (v.tot != 0.0) maxOf(0.0, v.tot - v.x.n) else null }
     fun numSort(fn: (JSONObject) -> Double?, asc: Boolean) = Comparator<JSONObject> { a, b ->

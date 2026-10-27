@@ -81,6 +81,8 @@ fun SettingsTab(vm: AdminViewModel, openKey: Int) {
     var f by remember { mutableStateOf(SetForm()) }
     var apiOn by remember { mutableStateOf(true) }
     var apiBusy by remember { mutableStateOf(false) }
+    var linkOn by remember { mutableStateOf(true) }
+    var linkBusy by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var paySaving by remember { mutableStateOf(false) }
 
@@ -89,6 +91,7 @@ fun SettingsTab(vm: AdminViewModel, openKey: Int) {
             val r = vm.fetchS()
             f = formOf(r)
             apiOn = r.opt("api_enabled") != false
+            linkOn = r.opt("ai_link_enabled") != false
         }
     }
 
@@ -178,6 +181,23 @@ fun SettingsTab(vm: AdminViewModel, openKey: Int) {
         }
     }
 
+    /** AI-prompt GitHub link on/off: saved as soon as the switch is toggled. */
+    fun toggleLink(on: Boolean) {
+        linkBusy = true; linkOn = on
+        AppScope.scope.launch {
+            try {
+                var r = Sb.patch("app_settings?id=eq.1", jsonOf("ai_link_enabled" to on))
+                if (r.length() == 0) r = Sb.upsert("app_settings?on_conflict=id", jsonOf("id" to 1, "ai_link_enabled" to on))
+                vm.updateS(vm.S.copyWith(jsonOf("ai_link_enabled" to on)))
+                AppToast.show(if (on) "GitHub লিংক চালু করা হয়েছে" else "GitHub লিংক বন্ধ করা হয়েছে")
+            } catch (e: CancellationException) { throw e } catch (e: Exception) {
+                linkOn = !on
+                val m = e.message.orEmpty()
+                AppToast.show(if (Regex("ai_link_enabled", RegexOption.IGNORE_CASE).containsMatchIn(m)) "ai_link_enabled কলাম নেই — $SQLHINT" else m, true)
+            } finally { linkBusy = false }
+        }
+    }
+
     Column(Modifier.widthIn(max = 640.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         // ---- পয়েন্টস ও রিভিউ ----
         AppCard {
@@ -206,6 +226,22 @@ fun SettingsTab(vm: AdminViewModel, openKey: Int) {
             Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Switch(checked = apiOn, onCheckedChange = { toggleApi(it) }, enabled = !apiBusy)
                 Text(if (apiOn) "এপি আই চালু" else "এপি আই বন্ধ", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            }
+        }
+
+        // ---- AI প্রম্পটে GitHub লিংক চালু / বন্ধ ----
+        AppCard {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                SectionTitle("GitHub লিংক (AI প্রম্পট কপি)", Modifier.weight(1f))
+                Badge(if (linkOn) "চালু" else "বন্ধ", if (linkOn) "ok" else "bad")
+            }
+            HintText(
+                "চালু থাকলে View পেইজের AI আইকনে ক্লিক করলে GitHub ডাউনলোড অংশ + পেইজের ছবির লিংক সহ প্রম্পট কপি হবে। " +
+                    "বন্ধ থাকলে শুধু প্রম্পট কপি হবে (কোনো লিংক থাকবে না)। টগল করলেই সাথে সাথে সংরক্ষিত হয়।"
+            )
+            Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Switch(checked = linkOn, onCheckedChange = { toggleLink(it) }, enabled = !linkBusy)
+                Text(if (linkOn) "GitHub লিংক চালু" else "GitHub লিংক বন্ধ", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         }
 

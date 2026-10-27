@@ -375,9 +375,11 @@ fun ImportDialog(vm: AdminViewModel, ask: AskController, onClose: () -> Unit) {
             err = ""; busy = true; setSplitPref(split)
             // with image creation the JSON total_pages is ignored for books that have a PDF link:
             // they show on the Task page once the images are made and counted
-            val toSave = if (wantRun) src.map { r ->
+            val toSave0 = if (wantRun) src.map { r ->
                 if (!r.str("pdf_url").isNullOrEmpty()) JSONObject(r.toString()).also { it.remove("total_pages") } else r
             } else src
+            // keep the file order: first row = newest, so the lists show 1, 2, 3 … in sequence
+            val toSave = com.srizwan.task.core.BookOrder.stampInFileOrder(toSave0)
             var added = 0
             try {
                 var i = 0
