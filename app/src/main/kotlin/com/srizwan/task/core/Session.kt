@@ -61,12 +61,24 @@ object Auth {
             AppToast.show("নেটওয়ার্ক সমস্যা: " + e.message, true)
             return null
         }
-        if (u == null || Device.isEmpty(u.deviceId) || u.deviceId != Device.id()) { logout(); return null }
+        if (u == null || !Device.matches(u.deviceId)) { logout(); return null }
+        if (Device.needsUpgrade(u.deviceId)) upgradeDevice(u)   // old random id -> new hardware id (silent)
         if (u.isBlocked && !Phone.isAdminPhone(u.phone)) { _blocked.value = u; return null }
         _blocked.value = null
         if (admin && !Phone.isAdminPhone(u.phone)) { Nav.go(Routes.TASK, replace = true); return null }
         touchActive(u)
         return u
+    }
+
+    /** Moves an old install's device id to the new one. A failure is ignored (it is tried again next time). */
+    private fun upgradeDevice(u: AppUser) {
+        AppScope.scope.launch {
+            try {
+                Sb.patchMin("app_users?id=eq.${enc(u.id)}", jsonOf("device_id" to Device.id()))
+            } catch (e: Exception) {
+                // ignored
+            }
+        }
     }
 
     /** Last-active time, at most once per 5 minutes; a missing column / failure is ignored. */

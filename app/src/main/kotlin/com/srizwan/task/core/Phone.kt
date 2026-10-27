@@ -33,5 +33,12 @@ object Phone {
         return PhoneResult(true, if (c.startsWith("+")) c else "+$f", "OK", true)
     }
 
+    /** "01712345678" -> "017*****78" (shown when this device already belongs to another account). */
+    fun mask(p: String?): String {
+        val t = p.orEmpty().trim()
+        if (t.length < 6) return t
+        return t.take(3) + "*".repeat(t.length - 5) + t.takeLast(2)
+    }
+
     fun isAdminPhone(p: String?): Boolean = !p.isNullOrEmpty() && normBD(p) == Cfg.ADMIN_PHONE
 }

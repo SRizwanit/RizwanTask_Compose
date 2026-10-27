@@ -26,8 +26,14 @@ object Users {
         return r.optJSONObject(0)?.let { AppUser(it) }
     }
 
+    /**
+     * The account (other than [excludeId]) that is bound to this phone. Looks for the new hardware id AND the old
+     * random id, so an old install is found too.
+     */
     suspend fun findByDevice(dev: String, excludeId: String? = null): AppUser? {
-        var p = "app_users?device_id=eq.${enc(dev)}&limit=1"
+        val ids = (Device.all() + dev).filter { !Device.isEmpty(it) }.distinct()
+        val inList = ids.joinToString(",") { "\"" + it + "\"" }
+        var p = "app_users?device_id=in.(" + enc(inList) + ")&limit=1"
         if (!excludeId.isNullOrEmpty()) p += "&id=neq.${enc(excludeId)}"
         return Sb.get(p).optJSONObject(0)?.let { AppUser(it) }
     }
