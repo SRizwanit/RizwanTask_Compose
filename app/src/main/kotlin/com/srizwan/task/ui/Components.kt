@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -161,18 +163,26 @@ fun AppField(
         interactionSource = interaction,
         decorationBox = { inner ->
             val shape = RoundedCornerShape(10.dp)
-            Box(
+            Row(
                 Modifier.fillMaxWidth()
                     .background(cs.surfaceVariant.copy(alpha = 0.55f), shape)
                     .border(if (focused) 2.dp else 1.dp, if (focused) cs.primary else cs.outline.copy(alpha = 0.6f), shape)
-                    .padding(horizontal = 12.dp, vertical = 11.dp)
-                    .padding(start = if (pin) 13.dp else if (leadingIcon != null) 24.dp else 0.dp),
-                contentAlignment = if (pin) Alignment.Center else Alignment.CenterStart
+                    .padding(horizontal = 12.dp, vertical = 11.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // React: an icon laid over the input's left side (input padding-left 36px)
-                if (leadingIcon != null) AppIcon(leadingIcon, Modifier.align(Alignment.CenterStart).offset(x = (-1).dp), size = 18.dp, tint = cs.onSurfaceVariant)
-                if (value.isEmpty()) Text(placeholder, style = textStyle.copy(color = cs.onSurfaceVariant.copy(alpha = 0.55f)))
-                inner()
+                // React: an icon laid over the input's left side (input padding-left 36px) — here a real slot
+                // beside the text, so the icon can never sit on top of the placeholder / typed text.
+                if (leadingIcon != null) {
+                    AppIcon(leadingIcon, size = 18.dp, tint = cs.onSurfaceVariant)
+                    Spacer(Modifier.width(10.dp))
+                }
+                Box(
+                    Modifier.weight(1f).padding(start = if (pin) 13.dp else 0.dp),
+                    contentAlignment = if (pin) Alignment.Center else Alignment.CenterStart
+                ) {
+                    if (value.isEmpty()) Text(placeholder, style = textStyle.copy(color = cs.onSurfaceVariant.copy(alpha = 0.55f)))
+                    inner()
+                }
             }
         }
     )
