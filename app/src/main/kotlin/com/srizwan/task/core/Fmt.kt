@@ -26,7 +26,7 @@ object Fmt {
         val nf = NumberFormat.getInstance(bnBD)
         nf.minimumFractionDigits = 2
         nf.maximumFractionDigits = 2
-        return nf.format(r2(x)) + " ৳"
+        return nf.format(r2(x)) + " পয়েন্টস"
     }
 
     /** Supabase timestamps: "2026-10-26T10:20:30.123+00:00", "...Z", without offset, or a plain date. */

@@ -3,7 +3,7 @@ package com.srizwan.task.core
 import org.json.JSONObject
 
 /**
- * common.js earnings: rate = book.page_rate, else the default page_rate from settings (0.20 ৳).
+ * common.js earnings: rate = book.page_rate, else the default page_rate from settings (0.20 পয়েন্টস).
  * Only "approved" pages earn (the rate at approval time is stored in proofs.rate); pending pages are shown
  * separately; "correction" pages earn nothing.
  */

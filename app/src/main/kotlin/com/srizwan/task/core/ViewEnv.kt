@@ -19,7 +19,7 @@ class ViewEnv(val ctx: ViewCtx, val toaster: ViewToaster, val apiFlag: ViewApiFl
     val imgCache = gh.createImageCache { n, p -> onImgProgress(n, p) }
 
     /** React `downloadCurrent` — [name] = file name of the open image (null = none open). Saves the original to Downloads. */
-    suspend fun downloadCurrent(context: Context, name: String?) = ViewDownload.downloadCurrent(context, gh, toaster, name)
+    suspend fun downloadCurrent(context: Context, name: String?) = ViewDownload.downloadCurrent(context, gh, toaster, name, ctx.bookName)
 
     /** React `imageB64(im)` (step 4-chha-1) — page image [name] as base64 for Gemini; the API steps (4-chha-2/3) build the `parts` from it. */
     suspend fun imageB64(name: String): ViewImgB64 = ViewGemini.imageB64(gh, imgCache, name)

@@ -70,18 +70,34 @@ object ViewDownload {
         }
     }
 
+    /** How many words of the book name go into the downloaded file name (\"আমীরে আহলে সুন্নাত …\" -> \"আমীরে আহলে\"). */
+    const val SHORT_NAME_WORDS = 2
+
+    /** Short book name for file names: the first [SHORT_NAME_WORDS] words, characters Android forbids in file names removed. */
+    fun shortBookName(book: String): String =
+        book.replace(Regex("[\\\\/:*?\"<>|\\p{Cntrl}]"), " ").trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+            .take(SHORT_NAME_WORDS).joinToString(" ").trim('.', ' ')
+
+    /** Saved file name: \"<short book name> <page file name>\", e.g. \"আমীরে আহলে 0001.jpg\" (just the page name when the book has no name). */
+    fun fileName(bookName: String, imageName: String): String {
+        val base = imageName.substringAfterLast('/')
+        val short = shortBookName(bookName)
+        return if (short.isEmpty()) base else "$short $base"
+    }
+
     /**
      * React `downloadCurrent`. [name] = the open image's file name, or null/empty when no image is open
      * (\"কোনো ছবি খোলা নেই\"). All messages go through [toaster] exactly like React's `toast(...)`.
      */
-    suspend fun downloadCurrent(ctx: Context, gh: ViewGithub, toaster: ViewToaster, name: String?) {
+    suspend fun downloadCurrent(ctx: Context, gh: ViewGithub, toaster: ViewToaster, name: String?, bookName: String = "") {
         if (name.isNullOrEmpty()) { toaster.toast("কোনো ছবি খোলা নেই", true); return }
         val mime = ViewUtils.MIME_BY_EXT[ViewUtils.extOf(name)] ?: "application/octet-stream"
+        val saveName = fileName(bookName, name)
         try {
             toaster.toast("মূল ছবি আনা হচ্ছে…", false, 4000)
             val buf = fetchOriginal(gh, name)
-            withContext(Dispatchers.IO) { save(ctx, name.substringAfterLast('/'), mime, buf) }
-            toaster.toast("ডাউনলোড: " + name + " (" + String.format(Locale.US, "%.2f", buf.size / 1048576.0) + " MB) — ফোনের Downloads ফোল্ডারে সেভ হয়েছে", false, 3500)
+            withContext(Dispatchers.IO) { save(ctx, saveName, mime, buf) }
+            toaster.toast("ডাউনলোড: " + saveName + " (" + String.format(Locale.US, "%.2f", buf.size / 1048576.0) + " MB) — ফোনের Downloads ফোল্ডারে সেভ হয়েছে", false, 3500)
         } catch (e: CancellationException) { throw e
         } catch (e: Exception) { toaster.toast("ডাউনলোড ব্যর্থ: " + (e.message ?: ""), true) }
     }
