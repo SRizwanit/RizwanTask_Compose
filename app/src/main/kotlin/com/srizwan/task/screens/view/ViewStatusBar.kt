@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.srizwan.task.core.openBrowserApp
 import com.srizwan.task.core.ViewConfig
 import com.srizwan.task.core.ViewEnv
 import com.srizwan.task.core.ViewUtils
@@ -120,6 +121,13 @@ fun ViewStatusBar(env: ViewEnv, st: ViewPageState, api: ViewApi, lens: ViewLens)
                     { st.aiCopy(context) }, icon = "sparkle",
                     hint = "AI প্রম্পট কপি — GitHub ডাউনলোড অংশ + এই পেইজের ছবির raw লিংক + OCR প্রম্পট (Supabase), একসাথে ক্লিপবোর্ডে",
                     desc = "AI প্রম্পট কপি", onHint = hint,
+                    height = 28.dp, width = 30.dp, radius = 8.dp, iconSize = 15.dp
+                )
+                // opens only the phone's browser app — no link, no text
+                ViewBtn(
+                    { openBrowserApp(context) }, icon = "globe",
+                    hint = "ব্রাউজার ওপেন করুন (কোনো লিংক বা লেখা ছাড়া শুধু ব্রাউজার খুলবে)",
+                    desc = "ব্রাউজার ওপেন", onHint = hint,
                     height = 28.dp, width = 30.dp, radius = 8.dp, iconSize = 15.dp
                 )
             }
