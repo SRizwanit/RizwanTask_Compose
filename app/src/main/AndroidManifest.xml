@@ -24,6 +24,9 @@
             <action android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>
         <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <intent>
             <action android:name="android.intent.action.GET_CONTENT" />
             <data android:mimeType="image/*" />
         </intent>
@@ -49,6 +52,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Google Lens for the page image (View -> Lens button): a WebView in its own screen -->
+        <activity
+            android:name=".screens.view.LensActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
 
     </application>
 </manifest>
