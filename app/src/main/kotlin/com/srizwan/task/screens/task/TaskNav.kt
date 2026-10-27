@@ -1,6 +1,5 @@
 package com.srizwan.task.screens.task
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,14 +20,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.srizwan.task.core.Fmt
 import com.srizwan.task.ui.AppIcon
-import com.srizwan.task.ui.AppMark
+import com.srizwan.task.ui.AppLogo
 import com.srizwan.task.ui.ThemeToggleButton
 import com.srizwan.task.ui.errColor
 import com.srizwan.task.ui.goldColor
@@ -64,7 +62,7 @@ fun TaskHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Image(rememberVectorPainter(AppMark), contentDescription = null, modifier = Modifier.size(30.dp))
+        AppLogo(size = 30.dp)
         Text(
             TASK_TITLES[tab].orEmpty(), color = cs.onBackground, fontSize = 17.sp, fontWeight = FontWeight.Bold,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)

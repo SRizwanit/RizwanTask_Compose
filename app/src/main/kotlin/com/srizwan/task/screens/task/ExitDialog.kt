@@ -38,6 +38,7 @@ import androidx.compose.ui.window.Dialog
 import com.srizwan.task.core.AppToast
 import com.srizwan.task.core.openUrl
 import com.srizwan.task.ui.AppIcon
+import com.srizwan.task.ui.AppLogo
 import com.srizwan.task.ui.errColor
 import com.srizwan.task.ui.goldColor
 
@@ -81,7 +82,7 @@ fun ExitDialog(onDismiss: () -> Unit) {
                             .background(Brush.verticalGradient(listOf(gold.copy(alpha = 0.22f), gold.copy(alpha = 0.06f))))
                             .border(1.dp, gold.copy(alpha = 0.55f), CircleShape),
                         contentAlignment = Alignment.Center
-                    ) { AppIcon("mark", size = 40.dp) }
+                    ) { AppLogo(size = 40.dp) }
 
                     Spacer(Modifier.height(14.dp))
                     Text("আসসালামু আলাইকুম", color = gold, fontSize = 19.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
