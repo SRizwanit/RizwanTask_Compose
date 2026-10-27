@@ -1,0 +1,178 @@
+name: Android Release Build (Signed)
+
+# Builds a signed release APK and publishes it to GitHub Releases.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   Signing : KEYSTORE_BASE64, KEY_ALIAS, KEYSTORE_PASSWORD, KEY_PASSWORD
+#   App     : SUPABASE_URL, SUPABASE_KEY, ADMIN_PHONE, ADMIN_WA
+#
+# Troubleshooting "Wrong password / BadPaddingException": usually a hidden
+# newline or space pasted into a secret. The keystore decode step already strips
+# whitespace. Set the `debug_signing` input to true to run a safe diagnostic
+# (it prints lengths and whitespace flags only, never secret characters).
+
+on:
+  workflow_dispatch:
+    inputs:
+      debug_signing:
+        description: 'Run signing diagnostics (no secrets are printed)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  APP_NAME: RizwanTask
+  GRADLE_VERSION: '9.7.0'   # keep in sync with the AGP version in app/build.gradle.kts
+
+concurrency:
+  group: signed-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build & Sign Release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # setup-gradle handles Gradle caching, so setup-java's `cache: gradle` is not needed.
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+
+      - name: Verify Gradle Version
+        run: gradle --version
+
+      - name: Decode Keystore from Secret
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          set -e
+          # printf + tr strips hidden whitespace/newlines before decoding
+          printf '%s' "$KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > release.jks
+          ls -lh release.jks
+          file release.jks
+
+      - name: Build Unsigned Release APK
+        run: gradle assembleRelease --stacktrace
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          ADMIN_PHONE: ${{ secrets.ADMIN_PHONE }}
+          ADMIN_WA: ${{ secrets.ADMIN_WA }}
+
+      - name: Locate Unsigned APK
+        id: find_apk
+        run: |
+          UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*-unsigned.apk" | head -n 1)
+          if [ -z "$UNSIGNED_APK" ]; then
+            UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          fi
+          if [ -z "$UNSIGNED_APK" ]; then
+            echo "::error::No release APK found in app/build/outputs/apk/release"
+            exit 1
+          fi
+          echo "unsigned_apk=$UNSIGNED_APK" >> "$GITHUB_OUTPUT"
+          ls -lh app/build/outputs/apk/release/
+
+      # Optional and safe: prints only lengths and whitespace flags, never secret
+      # characters (the old hex-dump step leaked the last 4 characters of each
+      # secret, because masking does not apply to transformed output).
+      - name: Diagnose signing secrets (optional)
+        if: ${{ inputs.debug_signing }}
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set +e
+          check() {
+            local label="$1" value="$2"
+            echo "$label: length=$(printf '%s' "$value" | wc -c)"
+            if [[ "$value" =~ [[:space:]] ]]; then
+              echo "  WARNING: $label contains whitespace/newline characters"
+            fi
+          }
+          check KEY_ALIAS "$KEY_ALIAS"
+          check KEYSTORE_PASSWORD "$KEYSTORE_PASSWORD"
+          check KEY_PASSWORD "$KEY_PASSWORD"
+
+          echo "== Keystore file =="
+          file release.jks
+          wc -c release.jks
+
+          echo "== Aliases in keystore =="
+          keytool -list -keystore release.jks -storepass "$KEYSTORE_PASSWORD" 2>&1 | head -n 20
+
+          echo "== Load private key (real signing test) =="
+          keytool -list -keystore release.jks -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" 2>&1 | head -n 20
+
+      - name: Zipalign + Sign APK
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          UNSIGNED_APK: ${{ steps.find_apk.outputs.unsigned_apk }}
+        run: |
+          set -e
+
+          # Newest installed Android build-tools
+          BUILD_TOOLS_DIR=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -n 1)
+          echo "Using build-tools: $BUILD_TOOLS_DIR"
+
+          ZIPALIGN="${BUILD_TOOLS_DIR}zipalign"
+          APKSIGNER="${BUILD_TOOLS_DIR}apksigner"
+
+          "$ZIPALIGN" -v 4 "$UNSIGNED_APK" app-release-aligned.apk
+
+          "$APKSIGNER" sign \
+            --ks release.jks \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass "pass:$KEYSTORE_PASSWORD" \
+            --key-pass "pass:$KEY_PASSWORD" \
+            --out app-release-signed.apk \
+            app-release-aligned.apk
+
+          "$APKSIGNER" verify --verbose app-release-signed.apk
+
+      - name: Verify Signed APK
+        id: verify
+        run: |
+          ls -lh app-release-signed.apk
+          echo "sha256=$(sha256sum app-release-signed.apk | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Clean up keystore
+        if: always()
+        run: rm -f release.jks
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app-release-signed.apk
+          tag_name: release-${{ github.run_number }}
+          name: ${{ env.APP_NAME }} v${{ github.run_number }} (Signed Release)
+          body: |
+            Signed Android release APK.
+
+            Build: #${{ github.run_number }}
+            Commit: `${{ github.sha }}`
+            SHA-256: `${{ steps.verify.outputs.sha256 }}`
+
+            Download: app-release-signed.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
