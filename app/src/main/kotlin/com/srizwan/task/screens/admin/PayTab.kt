@@ -91,12 +91,12 @@ fun PayTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                 if (a == "paid") {
                     val note = ask.ask(
                         title = "পেমেন্ট নিশ্চিত করুন",
-                        label = Fmt.money(amount) + " → " + method + " " + number + " (টাকা পাঠানোর পরেই চিহ্নিত করুন)। ট্রানজেকশন আইডি / নোট (ঐচ্ছিক):",
+                        label = Fmt.money(amount) + " → " + method + " " + number + " (পয়েন্টস পাঠানোর পরেই চিহ্নিত করুন)। ট্রানজেকশন আইডি / নোট (ঐচ্ছিক):",
                         ok = "পরিশোধিত চিহ্নিত করুন"
                     ) ?: return@launch
                     val sm = vm.userSum(userId)
                     if (sm.earned < sm.paid + amount && !ask.confirm(
-                            "সতর্কতা: ইউজারের অনুমোদিত আয় (" + Fmt.money(sm.earned) + ") পরিশোধিত + এই রিকোয়েস্টের (" +
+                            "সতর্কতা: ইউজারের অনুমোদিত পয়েন্টস (" + Fmt.money(sm.earned) + ") পরিশোধিত + এই রিকোয়েস্টের (" +
                                 Fmt.money(sm.paid + amount) + ") চেয়ে কম। তবুও পরিশোধিত চিহ্নিত করবেন?"
                         )
                     ) return@launch
@@ -123,7 +123,7 @@ fun PayTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                             userId, "পেমেন্ট রিকোয়েস্ট বাতিল হয়েছে",
                             Fmt.money(amount) + " এর রিকোয়েস্টটি বাতিল হয়েছে।" +
                                 (if (why.isNotEmpty()) "\nকারণ: $why" else "") +
-                                "\nটাকা আপনার উত্তোলনযোগ্য ব্যালেন্সে ফিরে গেছে।",
+                                "\nপয়েন্টস আপনার উত্তোলনযোগ্য ব্যালেন্সে ফিরে গেছে।",
                             "payment"
                         )
                     } catch (e: CancellationException) { throw e } catch (e: Exception) { /* ignore */ }
@@ -209,7 +209,7 @@ fun PayTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                         if (pages != 0.0) append(" • অনুমোদিত ${Fmt.bn(pages)} পেইজ")
                         if (!x.str("processed_at").isNullOrEmpty()) append("\nপ্রক্রিয়া: ${Fmt.fmtDT(x.str("processed_at"))}")
                         if (!x.str("note").isNullOrEmpty()) append("\nনোট: ${x.str("note")}")
-                        append("\nইউজারের হিসাব: মোট আয় ${Fmt.money(sm.earned)} • পরিশোধিত ${Fmt.money(sm.paid)} • রিকোয়েস্টে ${Fmt.money(sm.requested)}")
+                        append("\nইউজারের হিসাব: মোট পয়েন্টস ${Fmt.money(sm.earned)} • পরিশোধিত ${Fmt.money(sm.paid)} • রিকোয়েস্টে ${Fmt.money(sm.requested)}")
                     }
                     Text(meta, color = cs.onSurfaceVariant, fontSize = 12.5.sp, lineHeight = 18.sp)
 

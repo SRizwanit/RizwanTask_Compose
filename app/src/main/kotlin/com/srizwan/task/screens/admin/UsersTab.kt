@@ -60,7 +60,7 @@ private fun UserStats(vm: AdminViewModel, u: JSONObject) {
         Tile(Fmt.bn(sm.approved), "অনুমোদিত", m, small = true)
         Tile(Fmt.bn(sm.pending), "রিভিউ বাকি", m, small = true)
         Tile(Fmt.bn(sm.correction), "সংশোধন", m, small = true)
-        Tile(Fmt.money(sm.earned), "মোট আয়", m, small = true)
+        Tile(Fmt.money(sm.earned), "মোট পয়েন্টস", m, small = true)
         Tile(Fmt.money(sm.available), "উত্তোলনযোগ্য", m, small = true)
         Tile(Fmt.money(sm.paid), "পরিশোধিত", m, small = true)
         Tile(Fmt.bn(x?.today ?: 0) + " / " + Fmt.bn(x?.w7 ?: 0), "আজ / ৭ দিন", m, small = true)

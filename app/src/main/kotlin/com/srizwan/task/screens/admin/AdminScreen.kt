@@ -52,7 +52,7 @@ private val TABS = listOf(
     AdminTab("Dash", "chart", "ড্যাশবোর্ড", step = "২-ঞ"),
     AdminTab("Users", "users", "ব্যবহারকারী", step = "২-গ"),
     AdminTab("Review", "check", "রিভিউ", badge = "review", step = "২-ছ"),
-    AdminTab("Pay", "wallet", "পেমেন্ট", badge = "pay", step = "২-চ"),
+    AdminTab("Pay", "points", "পেমেন্ট", badge = "pay", step = "২-চ"),
     AdminTab("Books", "book", "কিতাব", step = "২-জ"),
     AdminTab("Notice", "bell", "নোটিশ", step = "২-ঙ"),
     AdminTab("Log", "list", "লগ", step = "২-ঙ"),

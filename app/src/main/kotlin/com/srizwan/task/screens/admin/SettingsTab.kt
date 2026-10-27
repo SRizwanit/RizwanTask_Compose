@@ -148,11 +148,11 @@ fun SettingsTab(vm: AdminViewModel, openKey: Int) {
                 val r = Sb.patch("app_settings?id=eq.1", row)
                 if (r.length() == 0) Sb.upsert("app_settings?on_conflict=id", JSONObject(row.toString()).put("id", 1))
                 val old = vm.S.opt("page_rate")
-                vm.updateS(vm.S.copyWith(row)); AppToast.show("আয় সেটিংস সংরক্ষিত হয়েছে")
+                vm.updateS(vm.S.copyWith(row)); AppToast.show("পয়েন্টস সেটিংস সংরক্ষিত হয়েছে")
                 val oldTxt = numStr(old)
                 ActivityLog.log(
                     "admin_settings",
-                    "রেট ${numStr(rate)} ৳, ন্যূনতম ${numStr(min)} ৳" + if (oldTxt.isNotEmpty() && oldTxt != numStr(rate)) " (আগে $oldTxt)" else ""
+                    "রেট ${numStr(rate)} পয়েন্টস, ন্যূনতম ${numStr(min)} পয়েন্টস" + if (oldTxt.isNotEmpty() && oldTxt != numStr(rate)) " (আগে $oldTxt)" else ""
                 )
             } catch (e: CancellationException) { throw e } catch (e: Exception) {
                 val m = e.message.orEmpty()
@@ -179,16 +179,16 @@ fun SettingsTab(vm: AdminViewModel, openKey: Int) {
     }
 
     Column(Modifier.widthIn(max = 640.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // ---- আয় ও রিভিউ ----
+        // ---- পয়েন্টস ও রিভিউ ----
         AppCard {
-            SectionTitle("আয় ও রিভিউ সেটিংস")
-            HintText("কিতাবে আলাদা রেট না দিলে এই ডিফল্ট রেট প্রযোজ্য। আয় গোনা হয় শুধু অনুমোদিত পেইজে; অনুমোদনের সময়ের রেট পেইজে সংরক্ষিত হয়, তাই পরে রেট বদলালে পুরনো অনুমোদিত পেইজের আয় বদলায় না।")
-            Field("ডিফল্ট রেট — প্রতি পেইজ (৳)", f.rate, "0.20", KeyboardType.Decimal) { f = f.copy(rate = numFilter(it)) }
-            Field("ন্যূনতম পেমেন্ট রিকোয়েস্ট (৳)", f.min, "50", KeyboardType.Decimal) { f = f.copy(min = numFilter(it)) }
+            SectionTitle("পয়েন্টস ও রিভিউ সেটিংস")
+            HintText("কিতাবে আলাদা রেট না দিলে এই ডিফল্ট রেট প্রযোজ্য। পয়েন্টস গোনা হয় শুধু অনুমোদিত পেইজে; অনুমোদনের সময়ের রেট পেইজে সংরক্ষিত হয়, তাই পরে রেট বদলালে পুরনো অনুমোদিত পেইজের পয়েন্টস বদলায় না।")
+            Field("ডিফল্ট রেট — প্রতি পেইজ (পয়েন্টস)", f.rate, "0.20", KeyboardType.Decimal) { f = f.copy(rate = numFilter(it)) }
+            Field("ন্যূনতম পেমেন্ট রিকোয়েস্ট (পয়েন্টস)", f.min, "50", KeyboardType.Decimal) { f = f.copy(min = numFilter(it)) }
             Field("ভুলের সতর্কবার্তা: সংশোধনের হার (%) এর বেশি হলে", f.wpct, "20", KeyboardType.Number) { f = f.copy(wpct = numFilter(it)) }
             Field("…কমপক্ষে এতগুলো পেইজ রিভিউ হওয়ার পর", f.wmin, "5", KeyboardType.Number) { f = f.copy(wmin = numFilter(it)) }
             Column(Modifier.padding(top = 16.dp)) {
-                PrimaryButton("আয় সেটিংস সংরক্ষণ", onClick = { savePay() }, enabled = !paySaving)
+                PrimaryButton("পয়েন্টস সেটিংস সংরক্ষণ", onClick = { savePay() }, enabled = !paySaving)
             }
         }
 

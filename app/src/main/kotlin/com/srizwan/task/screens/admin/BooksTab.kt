@@ -358,7 +358,7 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                     vm.patchBook(b.idStr(), jsonOf("page_rate" to v))
                     val old = if (b.isNull("page_rate") || !b.has("page_rate")) "" else numStr(b.opt("page_rate"))
                     if (old != (if (v == null) "" else numStr(v))) {
-                        ActivityLog.log("admin_rate", b.str("name").orEmpty() + " → " + (if (v == null) "ডিফল্ট" else numStr(v) + " ৳"))
+                        ActivityLog.log("admin_rate", b.str("name").orEmpty() + " → " + (if (v == null) "ডিফল্ট" else numStr(v) + " পয়েন্টস"))
                     }
                     ok++
                 } catch (e: CancellationException) { throw e } catch (e: Exception) {
@@ -570,7 +570,7 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     HintText("${Fmt.bn(rateList.size)}টি কিতাবের পেইজ প্রতি রেট একসাথে বদলাবে।")
-                    Text("পেইজ প্রতি রেট (৳) — ফাঁকা = ডিফল্ট রেট", color = cs.onSurfaceVariant, fontSize = 13.sp)
+                    Text("পেইজ প্রতি রেট (পয়েন্টস) — ফাঁকা = ডিফল্ট রেট", color = cs.onSurfaceVariant, fontSize = 13.sp)
                     AppField(
                         value = rateVal, onValueChange = { rateVal = it },
                         placeholder = "ডিফল্ট " + numStr(Earnings.rateOf(null, vm.S)), keyboardType = KeyboardType.Decimal,

@@ -163,7 +163,7 @@ fun BookDialog(vm: AdminViewModel, book: JSONObject?, onClose: () -> Unit) {
                     val old = vm.books.firstOrNull { it.idStr() == editId }
                     val oldS = if (old == null || !old.has("page_rate") || old.isNull("page_rate")) "null" else numStr(old.opt("page_rate"))
                     val newS = if (row.isNull("page_rate")) "null" else numStr(row.opt("page_rate"))
-                    if (oldS != newS) ActivityLog.log("admin_rate", name + " → " + (if (row.isNull("page_rate")) "ডিফল্ট" else numStr(row.opt("page_rate")) + " ৳"))
+                    if (oldS != newS) ActivityLog.log("admin_rate", name + " → " + (if (row.isNull("page_rate")) "ডিফল্ট" else numStr(row.opt("page_rate")) + " পয়েন্টস"))
                 }
                 onClose(); AppToast.show("কিতাব সংরক্ষিত হয়েছে")
             } catch (e: CancellationException) { throw e } catch (e: Exception) {
@@ -193,7 +193,7 @@ fun BookDialog(vm: AdminViewModel, book: JSONObject?, onClose: () -> Unit) {
                 AppField(fm.cover, { fm = BookForm(fm.name, fm.author, it, fm.pdf, fm.rate, fm.tot, fm.gu, fm.repo, fm.br, fm.fold) }, placeholder = "https://...", keyboardType = KeyboardType.Uri)
                 Lbl("কিতাবের পিডিএফ লিংক")
                 AppField(fm.pdf, { fm = BookForm(fm.name, fm.author, fm.cover, it, fm.rate, fm.tot, fm.gu, fm.repo, fm.br, fm.fold) }, placeholder = "https://...", keyboardType = KeyboardType.Uri)
-                Lbl("পেইজ প্রতি রেট (৳) — ফাঁকা = ডিফল্ট রেট")
+                Lbl("পেইজ প্রতি রেট (পয়েন্টস) — ফাঁকা = ডিফল্ট রেট")
                 AppField(
                     fm.rate, { fm = BookForm(fm.name, fm.author, fm.cover, fm.pdf, it, fm.tot, fm.gu, fm.repo, fm.br, fm.fold) },
                     placeholder = "ডিফল্ট " + numStr(Earnings.rateOf(null, S)), keyboardType = KeyboardType.Decimal
