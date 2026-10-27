@@ -66,8 +66,8 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
     /** React `cur` (-1 = no page open). */
     var cur by mutableIntStateOf(-1); private set
     /** Set by the `init` step (4-ঘ-৫) after the page list is read from the repo. */
-    fun setImages(list: List<ViewImageRef>) { images = list }
-    fun setCur(i: Int) { cur = i }
+    fun putImages(list: List<ViewImageRef>) { images = list }
+    fun putCur(i: Int) { cur = i }
     val currentName: String? get() = images.getOrNull(cur)?.name
 
     // ---------------- image area ----------------
@@ -298,7 +298,7 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
     /** React `putText`: the text box normalises new lines itself, so the normalised value is what we keep. */
     fun putText(v: String): String { val nv = ViewUtils.normNl(v); text = nv; return nv }
 
-    private fun setImgMsg(t: String) { ldrOn = false; imgMsg = t }
+    private fun showImgMsg(t: String) { ldrOn = false; imgMsg = t }
     private fun ldrShow(pct: Float?) { ldrKey++; imgMsg = ""; ldrOn = true; ldrPct = pct }
 
     /** React `imgProg(name, pct)` — only for the image that is open now, and only while the loader is shown. */
@@ -366,13 +366,13 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
                     if (ldrOn) ldrPct = 100f
                     val bmp = withContext(Dispatchers.Default) { vi.decode() }
                     if (my != seq) return@async
-                    if (bmp == null) setImgMsg("ছবি দেখানো যায়নি") else {
+                    if (bmp == null) showImgMsg("ছবি দেখানো যায়নি") else {
                         image = bmp
-                        setImgMsg("")
+                        showImgMsg("")
                         imgScrollX = pv?.optInt("il", 0) ?: 0; imgScrollY = pv?.optInt("it", 0) ?: 0; imgScrollTick++
                     }
                 } catch (e: CancellationException) { throw e } catch (e: Exception) {
-                    if (my == seq) setImgMsg("ছবি লোড ব্যর্থ: " + (e.message ?: ""))
+                    if (my == seq) showImgMsg("ছবি লোড ব্যর্থ: " + (e.message ?: ""))
                 }
             }
             val txtP = async { loadText(my, im) }
@@ -720,7 +720,7 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
         lightbox.closeLightbox()
         putText(""); taLoading = true; placeholder = ""; orig = ""; sha = null
         image = null
-        setImgMsg("আপনার জন্য কোনো পেইজ বাকি নেই — সব পেইজ অন্য ইউজার প্রুফড করেছেন")
+        showImgMsg("আপনার জন্য কোনো পেইজ বাকি নেই — সব পেইজ অন্য ইউজার প্রুফড করেছেন")
         updateStatus()
     }
 

@@ -134,7 +134,7 @@ private fun ViewApiFlagEffect(flag: ViewApiFlag) {
 /**
  * The real page (images, text editor, GitHub save, Gemini, TTS) comes in the next steps; until then a placeholder.
  * ধাপ ৪-ঘ-১: [ViewPageState] (page list, image, text, `loadDone`, `loadPage`, `goPage`) is created here; the lightbox lives in it
- * (`st.openLightbox()` on image tap; `loadPage` closes it). The `init` step (4-ঘ-৫) fills `st.setImages(..)` and calls `st.goPage`/`loadDone`.
+ * (`st.openLightbox()` on image tap; `loadPage` closes it). The `init` step (4-ঘ-৫) fills `st.putImages(..)` and calls `st.goPage`/`loadDone`.
  */
 @Composable
 fun ViewPage(env: ViewEnv, wantPage: String?) {
