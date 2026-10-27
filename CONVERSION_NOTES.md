@@ -163,3 +163,9 @@ in `local.properties` (see `local.properties.example`), or as GitHub **Secrets**
 
 ## Not converted on purpose
 PWA install prompt (`Install`), service worker, `runLegacy`, `PageShell` (browser `<head>` meta) — they have no meaning in a native app.
+
+## পরবর্তী বদল (ইউজার অনুরোধ)
+- প্রোফাইল: "টিকেট খুলুন" বাটন লুকানো (`ProfileScreen.kt`; `onTicket` ও সাপোর্ট স্ক্রিন অক্ষত)।
+- কিতাবের ক্রম: `core/BookOrder.kt` — নতুন আগে (created_at desc), সমান হলে নাম (বাংলা) ও আইডি; Task গ্রিড (`TaskData.shownBooks`) ও অ্যাডমিন Books ট্যাবের "নতুন" সর্টে ব্যবহৃত। ইমপোর্টে ফাইলের ক্রম রাখতে `created_at` ১ms ব্যবধানে বসে (প্রথম সারি সবচেয়ে নতুন)।
+- অ্যাডমিন সেটিংস: "GitHub লিংক (AI প্রম্পট কপি)" চালু/বন্ধ সুইচ → `app_settings.ai_link_enabled` [স্কিমা: `rizwantask_full_schema.sql`-এ কলাম যোগ]। View-এর AI আইকন (`ViewPageState.aiCopy`) কপির আগে সর্বশেষ মান পড়ে (`ViewApiFlag.refreshAiLink`): চালু = GitHub ডাউনলোড অংশ + ছবির লিংক + প্রম্পট; বন্ধ = শুধু প্রম্পট। কলাম না থাকলে/নেট সমস্যায় চালু ধরা হয়।
+- AI প্রম্পট কপি: সব ক্ষেত্রে (লিংক চালু/বন্ধ, প্রাইভেট রেপো) টোস্ট একটাই — "প্রম্পট কপি করা হয়েছে।"; GitHub/লিংক/রেপোর কোনো তথ্য ইউজারকে দেখানো হয় না (নিরাপত্তা)। বাটনের হিন্ট এখন "AI প্রম্পট কপি করুন"; ব্রাউজার-ওপেন ডায়ালগেও একই লেখা।

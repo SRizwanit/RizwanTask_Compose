@@ -81,6 +81,7 @@ create table if not exists public.app_settings (
   prompt_proof    text
 );
 alter table public.app_settings add column if not exists api_enabled boolean not null default true;      -- এপি আই চালু/বন্ধ
+alter table public.app_settings add column if not exists ai_link_enabled boolean not null default true;  -- AI প্রম্পটে GitHub লিংক চালু/বন্ধ
 alter table public.app_settings add column if not exists page_rate   numeric not null default 0.20;      -- টাকা/পেইজ (ডিফল্ট রেট)
 alter table public.app_settings add column if not exists min_payout  numeric not null default 50;        -- ন্যূনতম পেমেন্ট রিকোয়েস্ট (৳)
 alter table public.app_settings add column if not exists warn_pct    integer not null default 20;        -- সংশোধনের হার (%) এর বেশি হলে সতর্কতা
