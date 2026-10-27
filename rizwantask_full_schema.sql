@@ -35,6 +35,11 @@ alter table public.app_users add column if not exists blocked_reason  text;
 alter table public.app_users add column if not exists last_active_at  timestamptz;
 alter table public.app_users add column if not exists created_at      timestamptz not null default now();
 create index if not exists app_users_created_idx on public.app_users (created_at desc);
+-- একটি ডিভাইস = একটি একাউন্ট: একই device_id দুই সারিতে নয় (NULL একাধিক হতে পারে); ফাঁকা স্ট্রিং নয়
+update public.app_users set device_id = null where device_id is not null and (btrim(device_id) = '' or lower(btrim(device_id)) = 'null');
+create unique index if not exists app_users_device_id_uniq on public.app_users (device_id) where device_id is not null;
+alter table public.app_users drop constraint if exists app_users_device_id_not_blank;
+alter table public.app_users add constraint app_users_device_id_not_blank check (device_id is null or btrim(device_id) <> '');
 
 
 -- =====================================================================

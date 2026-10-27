@@ -37,7 +37,7 @@
 
 | উপধাপ | কাজ | React উৎস | অবস্থা |
 |---|---|---|---|
-| ২-ক | Support — WebView (`http://rizwantask.vercel.app`) | `Support.jsx` | ✅ |
+| ২-ক | Support — WebView (`https://RizwanTask.vercel.app/Support` (ব্যাক: ওয়েবের আগের পেইজ, না থাকলে প্রোফাইল)) | `Support.jsx` | ✅ |
 | ২-খ | Admin কাঠামো: গার্ড, ট্যাব বার, ডেটা লোডার | `Admin.jsx`, `admin/useAdminData.js`, `admin/ui.jsx`, `admin/helpers.js` | ✅ |
 | ২-গ | Admin → Users ট্যাব (ব্লক, PIN/ডিভাইস রিসেট, মুছা) | `admin/UsersTab.jsx` | ✅ |
 | ২-ঘ | Admin → Settings ট্যাব (রেট, ন্যূনতম পেমেন্ট, এপি আই সুইচ) | `admin/SettingsTab.jsx` | ✅ |
@@ -127,6 +127,7 @@
 | ৫-ক (লোগো দিন/রাত) | দিনের (light) মোডে উপরের লোগো ব্যাকগ্রাউন্ডে বোঝা যেত না — এখন দিনে গাঢ় সোনালি + গাঢ় সবুজ, রাতে আগের রঙ | — | ✅ `ui/AppIcon.kt` (`buildMark`, `AppMarkDay`, নতুন `AppLogo` — `LocalAppDark` দেখে বেছে নেয়; `AppMark`/`AppIcon("mark")` আগের মতোই, সবুজ টাইলের জন্য), `screens/task/TaskNav.kt` ও `screens/profile/ProfileScreen.kt` (হেডারে `AppLogo`), `screens/task/ExitDialog.kt` (`AppLogo`) |
 | ৫-খ (Lens ব্রাউজারে) | Google Lens আর অ্যাপের ভেতরের WebView-তে নয়, ফোনের ব্রাউজারে খোলে; পাবলিক রিপোতে `uploadbyurl` লিংক, প্রাইভেট রিপোতে `lens.google.com` (ছবি ডাউনলোড করে আপলোড করতে হবে) | — | ✅ `screens/view/ViewLens.kt` (`openUrl`; PNG/cache অংশ বাদ)। `LensActivity.kt` ও ম্যানিফেস্টের এন্ট্রি আর ব্যবহৃত হয় না — চাইলে মুছে ফেলা যাবে |
 | ৫-গ (অ্যাকাউন্ট মুছুন + প্রাইভেসি পলিসি) | প্রোফাইলে "প্রাইভেসি পলিসি" (ব্রাউজারে `https://rizwantask.vercel.app/privacypolicy`) ও "অ্যাকাউন্ট মুছুন" বোতাম; নতুন রুট `deleteaccount` — শর্ত পড়া, ৪ ডিজিট PIN যাচাই (`Pin.verify`), শেষ নিশ্চিতকরণ ডায়ালগ, তারপর `app_users` সারি ডিলিট (`Sb.del`), `ActivityLog` `account_deleted`, লগআউট। অ্যাডমিন নিজের অ্যাকাউন্ট মুছতে পারে না | — | ✅ `screens/profile/DeleteAccountScreen.kt` (নতুন; `PRIVACY_POLICY_URL`), `screens/profile/ProfileScreen.kt` (দুটি বোতাম), `nav/Nav.kt` (`Routes.DELETE_ACCOUNT`) |
+| ৫-ঘ (একটি ডিভাইস = একটি একাউন্ট) | ডিভাইস আইডি এখন `ANDROID_ID` থেকে বানানো (`hw_…`, SHA-256) — ডেটা ক্লিয়ার/রিইনস্টলে বদলায় না; পুরনো র‍্যান্ডম আইডি (`kp_device_v1`) এখনও চলে ও নীরবে নতুনটিতে সরে যায় (`Device.matches/needsUpgrade`, `Auth.requireAuth`)। লগইনের ফোন-ধাপেই চেক: এই ডিভাইসে অন্য একাউন্ট থাকলে OTP/PIN ছাড়াই থামে ও ওই একাউন্টের মাস্ক করা নাম্বার দেখায়। সার্ভারে `app_users.device_id` ইউনিক ইনডেক্স — দৌড়ের অবস্থায় `23505` এলে "ডিভাইস ব্যবহৃত" ধাপ | — | ✅ `core/Device.kt`, `core/Users.kt`, `core/Session.kt`, `core/Phone.kt`, `screens/LoginViewModel.kt`, `screens/LoginScreen.kt`, `RizwanApp.kt`, `supabase_one_device_one_account.sql` |
 | ৫-ঘ (View: ব্রাউজার ওপেন) | (১) View-এর নিচের ইমেজ-টুলসে AI প্রম্পট কপির পাশে নতুন ভেক্টর (globe) বোতাম; (২) AI প্রম্পট কপির পরের ডায়ালগে নতুন "ব্রাউজার ওপেন করুন" অপশন (globe ভেক্টর) — ডায়ালগের ক্রম: হ্যাঁ, ব্রাউজার ওপেন করুন, না, আর দেখাবে না। দুটোই চাপলে কোনো লিংক/লেখা ছাড়া শুধু ফোনের ব্রাউজার অ্যাপ খোলে | — | ✅ `core/Intents.kt` (`openBrowserApp`), `ui/ViewIcons.kt` (`globe` আইকন), `screens/view/ViewStatusBar.kt` (বোতাম), `screens/view/ViewAiOpenDialog.kt` (ডায়ালগের নতুন অপশন), `AndroidManifest.xml` (`<queries>`-এ `APP_BROWSER`) |
 
 > **View-এর নোট:** ব্যবহৃত ফাইল `View.jsx` (১২৭৪ লাইন, ৯৩ KB) — এর ২ নম্বর লাইনের মন্তব্যেই আছে "`View.logic.js` আর লাগে না"। তাই `View.logic.js` (২২৮৪ লাইন, ১৬৪ KB) কখনো পড়বেন না, `runLegacy`ও বাদ। একই লজিক দুইবার লিখবেন না।
@@ -149,7 +150,7 @@
 | `Splash.jsx` | `screens/SplashScreen.kt` (existing design kept; tap = skip) | 1 ✅ |
 | `Login.jsx` | `screens/LoginViewModel.kt` + `LoginScreen.kt` | 1 ✅ |
 | `Signup.jsx` | `screens/SignupScreen.kt` | 1 ✅ |
-| `Support.jsx` | WebView → `http://rizwantask.vercel.app` | 2 |
+| `Support.jsx` | WebView → `https://RizwanTask.vercel.app/Support` | 2 |
 | `Admin.jsx` + `admin/*` | next | 2 |
 | `Task.jsx` (blank for now) → full | `screens/task/TaskScreen.kt` | 2 blank / 3 full |
 | `Profile.jsx` | next | 3 |
