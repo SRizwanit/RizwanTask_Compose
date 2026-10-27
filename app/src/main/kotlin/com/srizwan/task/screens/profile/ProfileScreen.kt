@@ -1,5 +1,6 @@
 package com.srizwan.task.screens.profile
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -222,6 +223,9 @@ fun ProfileScreen() {
         Net.addRetryHandler(h)
         onDispose { Net.removeRetryHandler(h) }
     }
+
+    // Back from the Profile always goes to the Task page (an open dialog is closed by its own handler first).
+    BackHandler { Nav.go("task") }
 
     RizwanBackground(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
