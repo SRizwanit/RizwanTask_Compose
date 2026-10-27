@@ -25,6 +25,8 @@ internal val ICON_PATHS: Map<String, List<IconPath>> = mapOf(
     "refresh" to listOf(IconPath("M23 4L23 10L17 10"), IconPath("M20.49 15a9 9 0 1 1-2.12-9.36L23 10")),
     "device" to listOf(IconPath("M4 4H20a2 2 0 0 1 2 2V14a2 2 0 0 1 -2 2H4a2 2 0 0 1 -2 -2V6a2 2 0 0 1 2 -2z"), IconPath("M8 20L16 20"), IconPath("M12 16L12 20")),
     "check" to listOf(IconPath("M20 6L9 17L4 12")),
+    // points / coin: a round coin with a star (replaces the wallet / money look everywhere points are shown)
+    "points" to listOf(IconPath("M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0"), IconPath("M12 7l1.5 3.1 3.4.5-2.5 2.4.6 3.4L12 14.8l-3 1.6.6-3.4L7.1 10.6l3.4-.5z")),
     "wallet" to listOf(IconPath("M20 12V8H6a2 2 0 0 1 0-4h12v4"), IconPath("M4 6v12a2 2 0 0 0 2 2h14v-4"), IconPath("M18 12a2 2 0 0 0 0 4h4v-4z")),
     "ticket" to listOf(IconPath("M3 9a2 2 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a2 2 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z"), IconPath("M14 5v2.5M14 10.75v2.5M14 16.5V19")),
     "whatsapp" to listOf(IconPath("M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"), IconPath("M9.4 8.6c-.3.5-.3 1.3.5 2.6s2 2.2 3.3 2.6c.6.2 1.2-.1 1.5-.6l.3-.6-1.6-.9-.6.6c-.8-.3-1.5-1-1.9-1.8l.6-.6-.9-1.6z")),
