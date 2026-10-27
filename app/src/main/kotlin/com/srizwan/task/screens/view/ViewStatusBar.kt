@@ -119,7 +119,7 @@ fun ViewStatusBar(env: ViewEnv, st: ViewPageState, api: ViewApi, lens: ViewLens)
                 )
                 ViewBtn(
                     { st.aiCopy(context) }, icon = "sparkle",
-                    hint = "AI প্রম্পট কপি — GitHub ডাউনলোড অংশ + এই পেইজের ছবির raw লিংক + OCR প্রম্পট (Supabase), একসাথে ক্লিপবোর্ডে",
+                    hint = "AI প্রম্পট কপি করুন",
                     desc = "AI প্রম্পট কপি", onHint = hint,
                     height = 28.dp, width = 30.dp, radius = 8.dp, iconSize = 15.dp
                 )

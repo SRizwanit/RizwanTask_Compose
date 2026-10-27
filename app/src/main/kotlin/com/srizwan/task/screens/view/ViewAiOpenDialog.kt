@@ -59,7 +59,7 @@ fun ViewAiOpenDialog(st: ViewPageState) {
                 ViewIcon("sparkle", size = 26.dp, tint = c.pri)
             }
             Spacer(Modifier.height(12.dp))
-            Text("AI প্রম্পট কপি হয়েছে", color = c.muted, fontSize = 12.5.sp, textAlign = TextAlign.Center)
+            Text("প্রম্পট কপি করা হয়েছে।", color = c.muted, fontSize = 12.5.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(4.dp))
             Text(
                 "আপনি কি ব্রাউজারে ওপেন করতে চান?",

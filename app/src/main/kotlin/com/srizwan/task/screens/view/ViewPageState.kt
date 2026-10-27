@@ -1012,8 +1012,8 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
     }
 
     /** React `buildAiPrompt(im)` — GitHub download part + the raw link of this page's image + the OCR prompt (API-1 prompt from the settings, else the default). */
-    fun buildAiPrompt(im: ViewImageRef): String =
-        listOf(
+    fun buildAiPrompt(im: ViewImageRef, withLink: Boolean = true): String =
+        if (!withLink) aiOnlyPrompt() else listOf(
             "# UNIVERSAL MASTER PROMPT (v8.1): GitHub Public Image Fetch + Faithful OCR / Retyping, Any Language, Plain Text",
             "",
             "## ROLE",
@@ -1029,17 +1029,25 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
         ).joinToString("\n") + "\n\n" +
             (env.cfg.cfg.optJSONObject("api1")?.str("prompt").orEmpty().ifBlank { ViewConfig.API_DEF.getValue(1).prompt }).trim() + "\n"
 
+    /** The OCR prompt alone (no GitHub download part, no image link) — used when the admin switched the GitHub link off. */
+    private fun aiOnlyPrompt(): String =
+        (env.cfg.cfg.optJSONObject("api1")?.str("prompt").orEmpty().ifBlank { ViewConfig.API_DEF.getValue(1).prompt }).trim() + "\n"
+
     /** React `aiCopy` — the AI prompt button: copies the prompt of the open page. A private repo gets a warning (the AI cannot open the link). */
     fun aiCopy(context: Context) {
         if (cur < 0) { env.toaster.toast("কোনো ছবি খোলা নেই", true); return }
         val im = images[cur]
-        if (!copyText(context, buildAiPrompt(im))) { env.toaster.toast("কপি ব্যর্থ — ক্লিপবোর্ডে লেখা যাচ্ছে না", true); return }
-        val priv = repoPrivate == true
-        env.toaster.toast(
-            if (priv) "প্রম্পট কপি হয়েছে (পেইজ ${im.stem}) — তবে ছবির লিংক প্রাইভেট, AI এটি খুলতে পারবে না"
-            else "AI প্রম্পট কপি হয়েছে (পেইজ ${im.stem}) — AI চ্যাটে পেস্ট করুন",
-            priv, 4500
-        )
+        // admin switch (settings tab): GitHub link on = link + prompt, off = the prompt only; read fresh, then copy
+        scope.launch {
+            val withLink = env.apiFlag.refreshAiLink()
+            aiCopyDo(context, im, withLink)
+        }
+    }
+
+    private fun aiCopyDo(context: Context, im: ViewImageRef, withLink: Boolean) {
+        if (!copyText(context, buildAiPrompt(im, withLink))) { env.toaster.toast("কপি ব্যর্থ — ক্লিপবোর্ডে লেখা যাচ্ছে না", true); return }
+        // one fixed message for every case — no GitHub / link / repo details are shown to the user (security)
+        env.toaster.toast("প্রম্পট কপি করা হয়েছে।", false, 3000)
         // after the copy: ask whether to open the AI site in the browser (unless "আর দেখাবে না" was chosen)
         if (Prefs.getString(AI_ASK_OFF_KEY) != "1") aiAsk = true
     }
