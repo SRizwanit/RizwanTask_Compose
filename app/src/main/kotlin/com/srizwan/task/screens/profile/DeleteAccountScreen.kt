@@ -150,7 +150,7 @@ fun DeleteAccountScreen() {
                             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Point("অ্যাকাউন্ট ও লগইন তথ্য (নাম, মোবাইল নাম্বার, PIN, পেমেন্ট নাম্বার) মুছে যাবে।")
                                 Point("এই কাজ ফেরানো যাবে না — আবার আসতে চাইলে নতুন করে সাইন আপ করতে হবে।")
-                                Point("উত্তোলন না করা আয় থাকলে আগে অ্যাডমিনের সাথে যোগাযোগ করে নিন।")
+                                Point("উত্তোলন না করা পয়েন্টস থাকলে আগে অ্যাডমিনের সাথে যোগাযোগ করে নিন।")
                             }
                             if (me != null && isAdmin) {
                                 Text(

@@ -88,7 +88,7 @@ val PM_LABEL = mapOf("bkash" to "বিকাশ", "nagad" to "নগদ")
  *   header.top        -> [ProfileHeader]: logo, "প্রোফাইল", "N টি সম্পন্ন" chip, theme toggle, admin / logout (admin only)   3-চ-১
  *   section#pProf     -> [ProfileCard]:  avatar, name, role badge, completed-task stat, mobile / payment number / join date,
  *                        theme switch, logout, guide, ticket and WhatsApp buttons                                          3-চ-১
- *                        income stat `incCard` (মোট আয় + উত্তোলনযোগ্য / রিভিউ বাকি, from `TaskData.loadMoney` / `sum`)     3-ছ-২
+ *                        income stat `incCard` (মোট পয়েন্টস + উত্তোলনযোগ্য / রিভিউ বাকি, from `TaskData.loadMoney` / `sum`)     3-ছ-২
  *                        per-book progress `profProg` -> [ProfileProgress] / [ProgLine] (ProfileProgress.kt, `loadCounts`)   3-ছ-৩
  *                        "নোটিশ ও ঘোষণা" button (red unseen badge) -> `onNoticesBtn` -> [NoticeDialog] (Task page's), "seen" memory in
  *                        [TaskData] (`readSeen/writeSeen`, key `kp_notice_seen_<id>`)                                      3-ছ-১
@@ -315,11 +315,11 @@ private fun ProfileCard(
             // completed-task stat (React `.stat`; `#stN` shows ০ until the user is known, then the count or –)
             Spacer(Modifier.height(8.dp))
             StatBox("check", if (myCount == null && me == null) "০" else if (myCount == null) "–" else Fmt.bn(myCount), " টি টাস্ক সম্পন্ন")
-            // React `#incCard`: total earned + the small "withdrawable / pending review" line (before the first load: ০.০০ ৳, no line)
+            // React `#incCard`: total earned + the small "withdrawable / pending review" line (before the first load: ০.০০ পয়েন্টস, no line)
             val sum = data.sum
             Spacer(Modifier.height(10.dp))
             StatBox(
-                "wallet", if (sum != null) Fmt.money(sum.earned) else "০.০০ ৳", " মোট আয়",
+                "points", if (sum != null) Fmt.money(sum.earned) else "০.০০ পয়েন্টস", " মোট পয়েন্টস",
                 sub = if (sum != null) "উত্তোলনযোগ্য " + Fmt.money(sum.available) +
                     (if (sum.pendingAmt > 0) " • রিভিউ বাকি " + Fmt.money(sum.pendingAmt) else "") else null
             )
