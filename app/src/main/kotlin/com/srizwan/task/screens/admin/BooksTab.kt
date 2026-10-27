@@ -105,6 +105,7 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
     var rateList by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
     var bookDlg by remember { mutableStateOf(false) }                       // new / edit dialog open
     var editBook by remember { mutableStateOf<JSONObject?>(null) }          // null = new book
+    var pdfBook by remember { mutableStateOf<JSONObject?>(null) }           // book whose PDF is open in the viewer (4-ka)
     var impOpen by remember { mutableStateOf(false) }                       // JSON import dialog
     var counting by remember { mutableStateOf("") }                         // book id whose "পেইজ গণনা" is running
     var allCounting by remember { mutableStateOf(false) }
@@ -509,6 +510,7 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     SmBtn("পেইজ গণনা", "refresh", enabled = counting != id) { countOne(b) }
                                     SmBtn(if (v.hidden) "দেখান" else "লুকান", if (v.hidden) "check" else "ban") { toggleHide(b) }
+                                    if (b.str("pdf_url").orEmpty().isNotEmpty()) SmBtn("পিডিএফ দেখুন", "pdf", tone = "primary") { pdfBook = b }
                                     SmBtn("এডিট", "edit") { editBook = b; bookDlg = true }
                                     // retry opens the bulk run dialog in React (2-ঝ-২-চ); until then it asks the same question as "ছবি তৈরি"
                                     if (v.failed && b.str("pdf_url").orEmpty().isNotEmpty()) SmBtn("আবার চেষ্টা", "play", tone = "primary") { runOne(b) }
@@ -526,6 +528,13 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
     // new / edit book dialog and JSON import (BookDialogs.kt)
     if (bookDlg) androidx.compose.runtime.key(editBook?.idStr() ?: "new") { BookDialog(vm, editBook, onClose = { bookDlg = false }) }
     if (impOpen) ImportDialog(vm, ask, onClose = { impOpen = false })
+
+    // admin PDF viewer (AdminPdfViewer.kt, step 3); opened by the "পিডিএফ দেখুন" button of a book
+    pdfBook?.let { pb ->
+        androidx.compose.runtime.key(pb.idStr()) {
+            AdminPdfViewer(title = pb.str("name").orEmpty(), pdfLink = pb.str("pdf_url").orEmpty(), onClose = { pdfBook = null })
+        }
+    }
 
     // bulk image-creation / retry dialog (React bRunDlg)
     if (runOpen) {

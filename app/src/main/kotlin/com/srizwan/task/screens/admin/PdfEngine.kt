@@ -44,9 +44,10 @@ class PdfEngine private constructor(
     private val mutex = Mutex()
     @Volatile private var closed = false
 
-    // Bitmaps are kept by size in bytes: at most 1/6 of the app's heap, never more than 96 MB.
+    // Bitmaps are kept by size in bytes (4-gha: smaller than before, big PDFs must not push the app to its limit):
+    // at most 1/8 of the app's heap, never more than 64 MB and never less than 16 MB (about two full pages).
     private val cache = object : LruCache<String, Bitmap>(
-        minOf(Runtime.getRuntime().maxMemory() / 6, 96L * 1024 * 1024).toInt()
+        (Runtime.getRuntime().maxMemory() / 8).coerceIn(16L * 1024 * 1024, 64L * 1024 * 1024).toInt()
     ) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
@@ -108,6 +109,27 @@ class PdfEngine private constructor(
     /** Drops every drawn page (low memory, or when the zoom changes a lot). */
     fun clearCache() = cache.evictAll()
 
+    /**
+     * 4-gha: keeps only the pages drawn at [widthPx] — after a turn of the screen or a zoom change the old sizes can never be
+     * shown again and would only take memory until they slowly leave the LRU list.
+     */
+    fun retainWidth(widthPx: Int) {
+        val suffix = "@" + clampWidth(widthPx)
+        for (k in cache.snapshot().keys) if (!k.endsWith(suffix)) cache.remove(k)
+    }
+
+    /**
+     * 4-gha: reacts to the system's memory warnings (`ComponentCallbacks2.onTrimMemory` level).
+     * 10+ (running low): half of the drawn pages go; 15+ (critical) or 20+ (app hidden): all go. The page on the screen stays,
+     * because the screen holds its own reference and bitmaps are never recycled while shown.
+     */
+    fun trim(level: Int) {
+        when {
+            level >= 15 -> cache.evictAll()
+            level >= 10 -> cache.trimToSize(cache.size() / 2)
+        }
+    }
+
     /** Closes the file once a running draw has finished. Safe to call twice. */
     suspend fun close() {
         mutex.withLock {
@@ -128,7 +150,7 @@ class PdfEngine private constructor(
     companion object {
         const val MIN_WIDTH = 200
         const val MAX_SIDE = 8192                                    // longest side of a drawn page, px
-        const val MAX_PIXELS = 12L * 1000 * 1000                     // ~48 MB for one page at ARGB_8888
+        const val MAX_PIXELS = 8L * 1000 * 1000                      // ~32 MB for one page at ARGB_8888 (4-gha: was 12 million)
 
         /** Opens [file] and reads every page's size. Throws [PdfEngineException] (Bengali) for a broken / locked / empty PDF. */
         suspend fun open(file: File): PdfEngine = withContext(Dispatchers.IO) {
