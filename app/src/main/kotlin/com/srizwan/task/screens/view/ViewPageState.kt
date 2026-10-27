@@ -20,6 +20,7 @@ import com.srizwan.task.core.Prefs
 import com.srizwan.task.core.Sb
 import com.srizwan.task.core.ViewConfig
 import com.srizwan.task.core.ViewEnv
+import com.srizwan.task.core.ViewToaster
 import com.srizwan.task.core.ViewUtils
 import com.srizwan.task.core.copyText
 import com.srizwan.task.core.enc
@@ -28,6 +29,7 @@ import com.srizwan.task.screens.task.resumeKey
 import com.srizwan.task.ui.ViewDropdownOption
 import com.srizwan.task.ui.ViewDropdowns
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -37,6 +39,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -870,6 +873,44 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
         if (sha == null && text.trim().isEmpty() && !confirm("এই পেইজে কোনো টেক্সট নেই। তবুও প্রুফড চিহ্নিত করবেন?")) return
         proofBusy = true
         val t = env.toaster
+        try {
+            // custom dialog: "৩০ সেকেন্ড অপেক্ষা করুন...।" with a countdown; the work below starts only when it reaches zero
+            if (!runSaveWait()) { t.toast("সেভ ও পরের — বাতিল করা হয়েছে"); return }
+            if (cur < 0 || taLoading) return                  // (the page can change meanwhile, e.g. another user proofed it)
+            proofRun(t)
+        } finally {
+            proofBusy = false
+        }
+    }
+
+    /** Seconds of the "সেভ ও পরের" countdown dialog. */
+    companion object { const val SAVE_WAIT_SECONDS = 30 }
+
+    /** Seconds left while the countdown dialog is open (null = no dialog); shown by `ViewSaveWaitDialog`. */
+    var saveWait by mutableStateOf<Int?>(null); private set
+    private var saveWaitCancel: CompletableDeferred<Unit>? = null
+
+    /** Back button on the countdown dialog: stop waiting, nothing is saved. */
+    fun cancelSaveWait() { saveWaitCancel?.complete(Unit) }
+
+    /** Counts [SAVE_WAIT_SECONDS] .. 1 (one second each); true = finished, false = cancelled. */
+    private suspend fun runSaveWait(): Boolean {
+        val cancel = CompletableDeferred<Unit>()
+        saveWaitCancel = cancel
+        try {
+            for (sec in SAVE_WAIT_SECONDS downTo 1) {
+                saveWait = sec
+                if (withTimeoutOrNull(1000L) { cancel.await() } != null) return false
+            }
+            return true
+        } finally {
+            saveWait = null
+            saveWaitCancel = null
+        }
+    }
+
+    /** The real work of [proofAndNext] (after the countdown): save text, proofed mark, next page. */
+    private suspend fun proofRun(t: ViewToaster) {
         val i = cur; val stem = images[i].stem; val nxt = stepVis(i, 1); val isLast = nxt < 0; val needProof = !proofed.contains(stem)
         var k = 0
         t.loadingStart(1 + (if (needProof) 1 else 0) + (if (isLast) 0 else 1))
@@ -902,7 +943,6 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
             } else t.loadingDone("শেষ পেইজ — সেভ ও প্রুফড হয়েছে")
         } finally {
             if (t.isLoading && !t.isFinishing) t.loadingHide()
-            proofBusy = false
         }
     }
 
