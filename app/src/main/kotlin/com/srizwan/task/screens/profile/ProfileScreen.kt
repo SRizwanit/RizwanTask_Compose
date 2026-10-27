@@ -359,7 +359,7 @@ private fun ProfileCard(
                 OutlineButton("নোটিশ ও ঘোষণা", onClick = onNotices, color = cs.primary, icon = "bell", badge = data.badge)
                 OutlineButton("ব্যবহারের গাইড", onClick = onGuide, color = cs.primary, icon = "info")
                 // (the PWA install button is not needed in a native app)
-                OutlineButton("টিকেট খুলুন", onClick = onTicket, color = cs.primary, icon = "ticket")
+                // "টিকেট খুলুন" button hidden (onTicket kept so it can be restored)
                 OutlineButton("হোয়াটসঅ্যাপে যোগাযোগ করুন", onClick = onWhatsApp, color = waColor(), icon = "whatsapp")
                 // privacy policy (opens in the browser) + the "অ্যাকাউন্ট মুছুন" screen
                 OutlineButton("প্রাইভেসি পলিসি", onClick = onPrivacy, color = cs.primary, icon = "shield")
