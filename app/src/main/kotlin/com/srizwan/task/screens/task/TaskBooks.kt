@@ -137,11 +137,38 @@ fun BookGrid(
         }
     }
     if (showEmpty) {
-        Text(
-            if (failed) "কিতাব লোড হয়নি — নেট দেখে রিফ্রেশ চাপুন" else "কোনো কিতাব পাওয়া যায়নি",
-            color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp, textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 40.dp)
+        EmptyGlassNote(
+            icon = if (failed) "refresh" else "search",
+            text = if (failed) "কিতাব লোড হয়নি — নেট দেখে রিফ্রেশ চাপুন" else "কোনো কিতাব পাওয়া যায়নি"
         )
+    }
+}
+
+/**
+ * The "কোনো কিতাব পাওয়া যায়নি" / load-failed message on a frosted-glass pill, so it stays readable over the
+ * animated flower background: translucent fill, a light top-to-bottom sheen, a soft glass edge and a vector icon.
+ */
+@Composable
+private fun EmptyGlassNote(icon: String, text: String) {
+    val cs = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(16.dp)
+    Box(Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = Alignment.Center) {
+        Row(
+            Modifier.clip(shape)
+                .background(cs.surface.copy(alpha = 0.62f))
+                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.White.copy(alpha = 0.03f))))
+                .border(
+                    1.dp,
+                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.38f), cs.outline.copy(alpha = 0.35f))),
+                    shape
+                )
+                .padding(horizontal = 18.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            AppIcon(icon, size = 18.dp, tint = cs.onSurface)
+            Text(text, color = cs.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+        }
     }
 }
 
