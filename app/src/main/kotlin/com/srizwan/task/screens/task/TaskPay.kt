@@ -78,7 +78,7 @@ fun PayPane(data: TaskData, reqBusy: Boolean, onRequest: () -> Unit, onOpenPage:
     val hint = if (s == null) "" else when {
         payNumber.isNullOrEmpty() -> "আগে প্রোফাইল থেকে পেমেন্ট নাম্বার দিন।"
         ok -> "উত্তোলনযোগ্য ${Fmt.money(s.available)} — রিকোয়েস্ট পাঠালে অ্যাডমিন অনুমোদন দিয়ে ${PM[me?.paymentMethod] ?: ""} নাম্বার $payNumber-এ পাঠাবেন।"
-        else -> "ন্যূনতম ${Fmt.money(min)} হলে রিকোয়েস্ট করা যাবে। আরও ${Fmt.money(maxOf(0.0, min - s.available))} আয় দরকার।" +
+        else -> "ন্যূনতম ${Fmt.money(min)} হলে রিকোয়েস্ট করা যাবে। আরও ${Fmt.money(maxOf(0.0, min - s.available))} দরকার।" +
             (if (hasReq) " (একটি রিকোয়েস্ট অপেক্ষমাণ আছে)" else "")
     }
 
@@ -116,7 +116,7 @@ fun PayPane(data: TaskData, reqBusy: Boolean, onRequest: () -> Unit, onOpenPage:
                         modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
                     )
                     PrimaryButton(
-                        "পেমেন্ট রিকোয়েস্ট করুন", onClick = onRequest, icon = "wallet",
+                        "পেমেন্ট রিকোয়েস্ট করুন", onClick = onRequest, icon = "points",
                         enabled = !(reqBusy || (s != null && (!ok || payNumber.isNullOrEmpty())))
                     )
                 }
@@ -135,13 +135,13 @@ fun PayPane(data: TaskData, reqBusy: Boolean, onRequest: () -> Unit, onOpenPage:
                 }
             }
 
-            // কিতাব অনুযায়ী আয়
+            // কিতাব অনুযায়ী পয়েন্টস
             AppCard(modifier = Modifier.padding(bottom = 14.dp), padding = 14.dp) {
                 Column(Modifier.padding(horizontal = 2.dp)) {
-                    Text("কিতাব অনুযায়ী আয়", color = cs.onSurface, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("কিতাব অনুযায়ী পয়েন্টস", color = cs.onSurface, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Text(
                         buildAnnotatedString {
-                            append("আয় গোনা হয় শুধু অ্যাডমিন যে পেইজ ")
+                            append("পয়েন্টস গোনা হয় শুধু অ্যাডমিন যে পেইজ ")
                             withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("অনুমোদিত") }
                             append(" করেছেন সেগুলোর।")
                         },
@@ -226,7 +226,7 @@ private fun WarnBox(reviewed: Int, correction: Int, pct: Int) {
         Text(
             buildAnnotatedString {
                 withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("সতর্কতা:") }
-                append(" রিভিউ হওয়া ${Fmt.bn(reviewed)}টি পেইজের মধ্যে ${Fmt.bn(correction)}টিতে ভুল ধরা পড়েছে (${Fmt.bn(pct)}%)। দয়া করে মনোযোগ দিয়ে প্রুফ করুন — ভুল পেইজে আয় গোনা হয় না।")
+                append(" রিভিউ হওয়া ${Fmt.bn(reviewed)}টি পেইজের মধ্যে ${Fmt.bn(correction)}টিতে ভুল ধরা পড়েছে (${Fmt.bn(pct)}%)। দয়া করে মনোযোগ দিয়ে প্রুফ করুন — ভুল পেইজে পয়েন্টস গোনা হয় না।")
             },
             color = c, fontSize = 13.sp, lineHeight = 21.sp
         )
@@ -237,7 +237,7 @@ private fun WarnBox(reviewed: Int, correction: Int, pct: Int) {
 @Composable
 private fun PayTiles(s: Summary) {
     val items = listOf(
-        Triple(Fmt.money(s.earned), "মোট আয় (অনুমোদিত ${Fmt.bn(s.approved)} পেইজ)", true),
+        Triple(Fmt.money(s.earned), "মোট পয়েন্টস (অনুমোদিত ${Fmt.bn(s.approved)} পেইজ)", true),
         Triple(Fmt.money(s.available), "উত্তোলনযোগ্য (বাকি)", false),
         Triple(Fmt.money(s.paid), "এ পর্যন্ত পেয়েছেন", false),
         Triple(Fmt.money(s.requested), "রিকোয়েস্টে আছে (অপেক্ষমাণ)", false),
@@ -329,14 +329,14 @@ fun Forecast(s: Summary, min: Double, dr: Double) {
 
     AppCard(modifier = Modifier.padding(bottom = 14.dp), padding = 14.dp) {
         Column(Modifier.padding(horizontal = 2.dp)) {
-            Text("আয়ের পূর্বাভাস", color = cs.onSurface, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text("পয়েন্টসের পূর্বাভাস", color = cs.onSurface, fontWeight = FontWeight.Bold, fontSize = 15.sp)
             if (s.pending > 0) {
-                val tip = if (s.available >= min) "এখনই রিকোয়েস্ট করার মতো টাকা আছে।"
+                val tip = if (s.available >= min) "এখনই রিকোয়েস্ট করার মতো পয়েন্টস আছে।"
                 else if (allAvail >= min) "রিভিউ হয়ে গেলে ন্যূনতম পেমেন্ট (${Fmt.money(min)}) ছুঁয়ে রিকোয়েস্ট করতে পারবেন।"
                 else "ন্যূনতম পেমেন্ট (${Fmt.money(min)}) ছুঁতে আরও ≈ ${Fmt.bn(Math.ceil((min - allAvail) / dr).toLong())} পেইজ প্রুফ করতে হবে।"
                 val showApr = apr != null && apr < 1
                 FcRow("রিভিউ বাকি ${Fmt.bn(s.pending)} পেইজ সব অনুমোদিত হলে যোগ হবে", "≈ +" + Fmt.money(s.pendingAmt), up = true, dashed = true)
-                FcRow("তখন মোট আয় হবে", "≈ " + Fmt.money(allEarn), dashed = true)
+                FcRow("তখন মোট পয়েন্টস হবে", "≈ " + Fmt.money(allEarn), dashed = true)
                 FcRow("তখন উত্তোলনযোগ্য হবে", "≈ " + Fmt.money(allAvail), dashed = showApr)
                 if (showApr) FcRow(
                     "আপনার অনুমোদনের হার ${Fmt.bn(Math.round(apr!! * 100))}% — সেই হিসাবে যোগ হবে",

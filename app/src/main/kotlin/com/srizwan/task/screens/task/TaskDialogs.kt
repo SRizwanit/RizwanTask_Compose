@@ -213,7 +213,7 @@ fun RequestDialog(
                 RqKv("ন্যূনতম রিকোয়েস্ট", info.min)
                 RqKv(info.pmLabel, info.number)
                 // label.f + input[type=number][inputmode=decimal][step=0.01]
-                Text("কত টাকা চাইবেন (৳)", color = cs.onSurfaceVariant, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+                Text("কত পয়েন্টস চাইবেন", color = cs.onSurfaceVariant, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
                 OutlinedTextField(
                     value = amt,
                     onValueChange = { v ->
@@ -231,7 +231,7 @@ fun RequestDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    "অ্যাডমিন অনুমোদন দিয়ে এই নাম্বারে টাকা পাঠাবেন। নাম্বার ভুল হলে আগে প্রোফাইল থেকে ঠিক করুন।",
+                    "অ্যাডমিন অনুমোদন দিয়ে এই নাম্বারে পয়েন্টস পাঠাবেন। নাম্বার ভুল হলে আগে প্রোফাইল থেকে ঠিক করুন।",
                     color = cs.onSurfaceVariant, fontSize = 12.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 8.dp)
                 )
                 if (err.isNotEmpty()) Text(err, color = errColor(), fontSize = 12.sp, lineHeight = 18.sp, modifier = Modifier.padding(top = 8.dp))

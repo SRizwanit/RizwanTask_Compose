@@ -37,7 +37,7 @@ val TASK_TITLES = mapOf("task" to "টাস্কের তালিকা", "p
 /** React Task.jsx `NAV`: (tab, icon, label). */
 private val NAV = listOf(
     Triple("task", "tasks", "টাস্ক"),
-    Triple("pay", "wallet", "পেমেন্ট"),
+    Triple("pay", "points", "পেমেন্ট"),
     Triple("rank", "trophy", "র‍্যাংক")
 )
 

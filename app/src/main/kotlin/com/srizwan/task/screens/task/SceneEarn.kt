@@ -95,8 +95,8 @@ fun sceneEarn(): GuideScene {
                 .1f * Math.sin(Math.PI * Math.min(1f, bump2)).toFloat() * (if (f >= ARR[1]) 1f else 0f)
             tf(297f, 58f, ws) { wallet() }
 
-            svgText(env, bd(String.format(Locale.US, "%.2f", earned)) + " ৳", 297f, 112f, 25f, Color(0xFF0B4F40), FontWeight.Bold, middle = true)
-            svgText(env, "মোট আয়", 297f, 130f, 11f, Color(0xFF59706A), middle = true)
+            svgText(env, bd(String.format(Locale.US, "%.2f", earned)) + " পয়েন্টস", 297f, 112f, 25f, Color(0xFF0B4F40), FontWeight.Bold, middle = true)
+            svgText(env, "মোট পয়েন্টস", 297f, 130f, 11f, Color(0xFF59706A), middle = true)
 
             // "payment request" button rises, is tapped, turns into the sent state
             val bp = Math.max(spring(f - 140, damping = 11, stiffness = 120), 0f)

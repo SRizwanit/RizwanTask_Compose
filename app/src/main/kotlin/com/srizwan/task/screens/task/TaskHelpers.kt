@@ -31,7 +31,7 @@ fun minPayout(S: JSONObject): Double = S.finiteNum("min_payout") ?: DEF_MIN.toDo
 /** React `KIND`: notice kind -> label. */
 val NOTICE_KIND = mapOf("notice" to "ঘোষণা", "review" to "রিভিউ", "payment" to "পেমেন্ট")
 
-/** React `rateTxt`: "১২.০০ ৳". */
+/** React `rateTxt`: "১২.০০ পয়েন্টস". */
 fun rateTxt(r: Double): String = Fmt.money(r)
 
 /* ---- Prefs keys (one set per user) ---- */
