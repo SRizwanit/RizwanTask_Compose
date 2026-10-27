@@ -1,5 +1,6 @@
 package com.srizwan.task.screens.task
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -148,6 +149,7 @@ fun TaskScreen() {
 
     // React `guide` ref: the first-time guide dialog (3-ঙ-২). Seen -> remembered per user; closing loads the notices.
     var guideOpen by remember { mutableStateOf(false) }
+    var exitOpen by remember { mutableStateOf(false) }   // custom "exit the app?" dialog (back press)
     data.guideOpen = { guideOpen }
 
     // React `rankP` / `rank` / `rankCache` (3-ঘ): the leaderboard state.
@@ -291,6 +293,9 @@ fun TaskScreen() {
         onDispose { Net.removeRetryHandler(h) }
     }
 
+    // Back on the Task page asks before leaving the app (dialogs are their own windows and take back first)
+    BackHandler(enabled = !exitOpen) { exitOpen = true }
+
     RizwanBackground(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
             TaskHeader(
@@ -338,6 +343,7 @@ fun TaskScreen() {
                 onCancel = { rq = null }, onSend = { onSend() }
             )
         }
+        if (exitOpen) ExitDialog(onDismiss = { exitOpen = false })
         if (goalOpen) GoalDialog(
             value = glVal, onValue = { glVal = it; glErr = "" }, err = glErr,
             onCancel = { goalOpen = false }, onSave = { saveGoal() }
