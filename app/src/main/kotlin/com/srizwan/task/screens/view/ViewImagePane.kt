@@ -79,11 +79,11 @@ fun ViewImageScroll.posDp(density: Float): Pair<Int, Int> = (v.value / density).
 
 /** React `.pane` of `View.css` — white card, 1 dp line, 14 dp corners (12 on a phone), thin shadow; the image and text halves share it. */
 @Composable
-fun ViewPaneFrame(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+fun ViewPaneFrame(modifier: Modifier = Modifier, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
     val c = viewColors()
     val r = if (LocalConfiguration.current.screenWidthDp <= 640) 12.dp else 14.dp
     val shape = RoundedCornerShape(r)
-    Column(modifier.shadow(1.dp, shape).clip(shape).background(c.bg).border(1.dp, c.line, shape)) { content() }
+    Column(modifier.shadow(1.dp, shape).clip(shape).background(c.bg).border(1.dp, c.line, shape)) { this.content() }
 }
 
 /**

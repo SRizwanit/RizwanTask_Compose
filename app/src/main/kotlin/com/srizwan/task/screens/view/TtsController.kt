@@ -403,7 +403,8 @@ class TtsController(private val d: TtsDeps) {
         ))
         if (mode == "auto") {                         // some phones stay silent without any error: no sign of life in 4 s -> Google
             clearWd()
-            wd = d.scope.launch { delay(4000); if (id == this.id && !started) fallbackToG("সাড়া দিচ্ছে না") }
+            val ctl = this
+            wd = d.scope.launch { delay(4000); if (id == ctl.id && !started) fallbackToG("সাড়া দিচ্ছে না") }
         }
     }
 

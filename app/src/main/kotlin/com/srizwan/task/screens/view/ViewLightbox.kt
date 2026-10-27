@@ -122,17 +122,17 @@ fun ViewLightbox(state: ViewLightboxState, onDownload: () -> Unit) {
 
             // #lbClose (right 62px) and #lbDl (right 12px): 42px round white buttons
             Row(Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 8.dp, end = 12.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-                RoundBtn("বন্ধ করুন") { state.closeLightbox() } {
+                RoundBtn("বন্ধ করুন", icon = {
                     androidx.compose.material3.Icon(appIconVector("x"), null, Modifier.size(20.dp), tint = Color(0xFF111111))
-                }
-                RoundBtn("ডাউনলোড") { onDownload() } { ViewIcon("download", size = 20.dp, tint = Color(0xFF111111)) }
+                }, onClick = { state.closeLightbox() })
+                RoundBtn("ডাউনলোড", icon = { ViewIcon("download", size = 20.dp, tint = Color(0xFF111111)) }, onClick = { onDownload() })
             }
         }
     }
 }
 
 @Composable
-private fun RoundBtn(label: String, onClick: () -> Unit, icon: @Composable () -> Unit) {
+private fun RoundBtn(label: String, icon: @Composable () -> Unit, onClick: () -> Unit) {
     Box(
         Modifier
             .size(42.dp)
