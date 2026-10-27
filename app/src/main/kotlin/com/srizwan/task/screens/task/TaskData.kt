@@ -67,10 +67,11 @@ class TaskData {
      * proofed pages of it (so older work is not lost). New books appear only after their images are made and counted.
      */
     val shownBooks: List<JSONObject> by derivedStateOf {
-        books.filter { b ->
+        // newest books first (stable order: created_at desc, then name, then id)
+        com.srizwan.task.core.BookOrder.sortNewestFirst(books.filter { b ->
             !b.optBoolean("hidden", false) &&
                 ((b.finiteNum("total_pages") ?: 0.0) > 0.0 || (bookCounts[b.opt("id")?.toString() ?: ""] ?: 0) > 0)
-        }
+        })
     }
 
     /** React `sum`: my earnings summary, null until the first money load. */
