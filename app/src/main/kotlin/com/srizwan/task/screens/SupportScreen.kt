@@ -44,8 +44,8 @@ import com.srizwan.task.ui.HintText
 import com.srizwan.task.ui.PrimaryButton
 
 /** React Support.jsx (Firebase chat) was replaced by the hosted support site — shown in a WebView. */
-private const val SUPPORT_URL = "http://rizwantask.vercel.app"
-private const val SUPPORT_HOST = "rizwantask.vercel.app"
+private const val SUPPORT_URL = "https://srizwan198704-dev.github.io/islamipediaChat/"
+private const val SUPPORT_HOST = "srizwan198704-dev.github.io"
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
