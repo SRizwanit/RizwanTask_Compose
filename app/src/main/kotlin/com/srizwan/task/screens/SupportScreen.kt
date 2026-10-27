@@ -44,8 +44,8 @@ import com.srizwan.task.ui.HintText
 import com.srizwan.task.ui.PrimaryButton
 
 /** React Support.jsx (Firebase chat) was replaced by the hosted support site — shown in a WebView. */
-private const val SUPPORT_URL = "https://srizwan198704-dev.github.io/islamipediaChat/"
-private const val SUPPORT_HOST = "srizwan198704-dev.github.io"
+private const val SUPPORT_URL = "https://RizwanTask.vercel.app/Support"
+private const val SUPPORT_HOST = "rizwantask.vercel.app"
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -55,10 +55,10 @@ fun SupportScreen() {
     var canGoBack by remember { mutableStateOf(false) }
     var web by remember { mutableStateOf<WebView?>(null) }
 
-    // Web history first; when there is none left, go back to Task → Profile (React: go('task#prof')).
+    // Web history first (previous page); when there is none left, go back to the Profile.
     BackHandler {
         val w = web
-        if (w != null && w.canGoBack()) w.goBack() else Nav.go("task#prof")
+        if (w != null && w.canGoBack()) w.goBack() else Nav.go("profile")
     }
 
     DisposableEffect(Unit) {
@@ -122,7 +122,7 @@ fun SupportScreen() {
 
                                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                                     val uri = request.url
-                                    if (uri.host == SUPPORT_HOST) return false
+                                    if (uri.host.equals(SUPPORT_HOST, ignoreCase = true)) return false
                                     // WhatsApp / Telegram / mailto / other sites → outside the app
                                     return try {
                                         view.context.startActivity(
@@ -168,7 +168,7 @@ fun SupportScreen() {
                                         failed = false
                                         web?.reload()
                                     })
-                                    PrimaryButton("ফিরে যান", onClick = { Nav.go("task#prof") })
+                                    PrimaryButton("ফিরে যান", onClick = { Nav.go("profile") })
                                 }
                             }
                         }

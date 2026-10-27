@@ -16,6 +16,7 @@ import com.srizwan.task.core.PendingSignup
 import com.srizwan.task.core.Phone
 import com.srizwan.task.core.Pin
 import com.srizwan.task.core.Sb
+import com.srizwan.task.core.SbException
 import com.srizwan.task.core.Session
 import com.srizwan.task.core.Users
 import com.srizwan.task.core.enc
@@ -39,6 +40,8 @@ class LoginViewModel : ViewModel() {
     var step by mutableStateOf(Step.PHONE); private set
     var mode by mutableStateOf(PinMode.LOGIN); private set
     var blockReason by mutableStateOf(Block.BOUND); private set
+    /** masked phone of the account that already owns this device (shown on the "device used" step) */
+    var boundHint by mutableStateOf(""); private set
 
     var phoneIn by mutableStateOf("")
     var otp by mutableStateOf("")
@@ -75,13 +78,25 @@ class LoginViewModel : ViewModel() {
 
     private fun show(s: Step) { step = s; err = "" }
     private fun pinStep(m: PinMode) { mode = m; pin = ""; pin2 = ""; show(Step.PIN) }
-    private fun devStep(reason: Block) { blockReason = reason; show(Step.DEV) }
+    private fun devStep(reason: Block, owner: AppUser? = null) {
+        blockReason = reason
+        boundHint = if (reason == Block.USED) Phone.mask(owner?.phone) else ""
+        show(Step.DEV)
+    }
+
+    private fun isDuplicate(e: Exception): Boolean =
+        e is SbException && Regex("duplicate|23505", RegexOption.IGNORE_CASE).containsMatchIn(e.message.orEmpty())
 
     // user exists: PIN or device block?
-    private fun afterUserKnown(u: AppUser) {
-        val dev = Device.id()
+    // Rule: one device = one account. The account may only be opened on the device it is bound to, and a device that
+    // already belongs to another account cannot be used for this one (checked here, before the PIN is even asked).
+    private suspend fun afterUserKnown(u: AppUser) {
         val stored = u.deviceId
-        if (!Device.isEmpty(stored) && stored != dev) return devStep(Block.BOUND)
+        if (!Device.isEmpty(stored) && !Device.matches(stored)) return devStep(Block.BOUND)
+        if (Device.isEmpty(stored)) {
+            val other = Users.findByDevice(Device.id(), u.id)
+            if (other != null) return devStep(Block.USED, other)
+        }
         pinStep(if (Pin.hasPin(u)) PinMode.LOGIN else PinMode.SETUP_EXISTING)
     }
 
@@ -136,7 +151,11 @@ class LoginViewModel : ViewModel() {
                     "। অ্যাডমিনের সাথে যোগাযোগ করুন।"
                 return@launchBusy
             }
-            if (u != null) afterUserKnown(u) else startOtp()
+            if (u != null) { afterUserKnown(u); return@launchBusy }
+            // new number: if this device already has an account, stop now (no OTP, no PIN)
+            val owner = Users.findByDevice(Device.id())
+            if (owner != null) { devStep(Block.USED, owner); return@launchBusy }
+            startOtp()
         }
     }
 
@@ -147,7 +166,8 @@ class LoginViewModel : ViewModel() {
         if (c.length != 6) { err = "৬ ডিজিটের কোড দিন"; return }
         launchBusy {
             if (!Otp.verify(phone, c)) { err = "দয়া করে সঠিক ওটিপি লিখুন"; return@launchBusy }
-            if (Users.findByDevice(Device.id()) != null) { devStep(Block.USED); return@launchBusy }
+            val owner = Users.findByDevice(Device.id())
+            if (owner != null) { devStep(Block.USED, owner); return@launchBusy }
             pinStep(PinMode.SETUP_NEW)
         }
     }
@@ -168,21 +188,34 @@ class LoginViewModel : ViewModel() {
                     val u = user ?: return@launchBusy
                     if (!Pin.verify(u, pin)) { pin = ""; err = "PIN সঠিক নয়"; return@launchBusy }
                     if (Device.isEmpty(u.deviceId)) {
-                        if (Users.findByDevice(dev, u.id) != null) { devStep(Block.USED); return@launchBusy }
-                        Sb.patch("app_users?id=eq.${enc(u.id)}", jsonOf("device_id" to dev))
+                        val other = Users.findByDevice(dev, u.id)
+                        if (other != null) { devStep(Block.USED, other); return@launchBusy }
+                        try {
+                            Sb.patch("app_users?id=eq.${enc(u.id)}", jsonOf("device_id" to dev))
+                        } catch (e: Exception) {
+                            // the server's unique rule refused: another account got this device in the meantime
+                            if (isDuplicate(e)) { devStep(Block.USED, Users.findByDevice(dev, u.id)); return@launchBusy }
+                            throw e
+                        }
                         u.deviceId = dev
                     }
                     finish(u)
                 }
                 PinMode.SETUP_EXISTING -> {
                     val u = user ?: return@launchBusy
-                    if (Users.findByDevice(dev, u.id) != null) { devStep(Block.USED); return@launchBusy }
+                    val other = Users.findByDevice(dev, u.id)
+                    if (other != null) { devStep(Block.USED, other); return@launchBusy }
                     val salt = Pin.newSalt()
                     val hash = Pin.hashPin(pin, salt)
-                    Sb.patch(
-                        "app_users?id=eq.${enc(u.id)}",
-                        jsonOf("password_salt" to salt, "password_hash" to hash, "device_id" to dev)
-                    )
+                    try {
+                        Sb.patch(
+                            "app_users?id=eq.${enc(u.id)}",
+                            jsonOf("password_salt" to salt, "password_hash" to hash, "device_id" to dev)
+                        )
+                    } catch (e: Exception) {
+                        if (isDuplicate(e)) { devStep(Block.USED, Users.findByDevice(dev, u.id)); return@launchBusy }
+                        throw e
+                    }
                     u.deviceId = dev
                     finish(u)
                 }
@@ -201,14 +234,13 @@ class LoginViewModel : ViewModel() {
                 if (u == null) { err = "একাউন্ট খুঁজে পাওয়া যায়নি"; return@launchBusy }
                 if (u.isBlocked && !Phone.isAdminPhone(u.phone)) { err = "আপনার অ্যাকাউন্ট ব্লক করা হয়েছে"; return@launchBusy }
                 val st = u.deviceId
-                val dev = Device.id()
-                if (Device.isEmpty(st) || st == dev) {
+                if (Device.isEmpty(st) || Device.matches(st)) {
                     AppToast.show("ডিভাইস মিলেছে, এখন লগইন করুন")
                     pinStep(if (Pin.hasPin(u)) PinMode.LOGIN else PinMode.SETUP_EXISTING)
                 } else {
                     err = "এখনো অ্যাডমিন ডিভাইস রিসেট করেননি, একটু পর আবার চেষ্টা করুন"
                 }
-            } else if (Users.findByDevice(Device.id()) != null) {
+            } else if (Users.findByDevice(Device.id(), user?.id) != null) {
                 err = "এই ডিভাইসে এখনো অন্য একাউন্ট বাঁধা আছে"
             } else {
                 AppToast.show("ডিভাইস এখন খালি আছে")
