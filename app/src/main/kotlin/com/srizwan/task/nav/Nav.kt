@@ -18,6 +18,7 @@ import com.srizwan.task.core.Auth
 import com.srizwan.task.core.Session
 import com.srizwan.task.screens.LoginScreen
 import com.srizwan.task.screens.admin.AdminScreen
+import com.srizwan.task.screens.profile.DeleteAccountScreen
 import com.srizwan.task.screens.profile.ProfileScreen
 import com.srizwan.task.screens.SignupScreen
 import com.srizwan.task.screens.SplashScreen
@@ -35,12 +36,13 @@ object Routes {
     const val SIGNUP = "signup"
     const val TASK = "task"
     const val PROFILE = "profile"
+    const val DELETE_ACCOUNT = "deleteaccount"
     const val SUPPORT = "support"
     const val ADMIN = "admin"
     const val VIEW = "view"
     const val VIEW_PATTERN = "view?book={book}&page={page}"
 
-    val NAMES = listOf(LOGIN, SIGNUP, TASK, PROFILE, SUPPORT, ADMIN, VIEW)
+    val NAMES = listOf(LOGIN, SIGNUP, TASK, PROFILE, DELETE_ACCOUNT, SUPPORT, ADMIN, VIEW)
 }
 
 /**
@@ -113,6 +115,7 @@ fun AppNav() {
         composable(Routes.SIGNUP) { key(reload) { SignupScreen() } }
         composable(Routes.TASK) { key(reload) { TaskScreen() } }
         composable(Routes.PROFILE) { key(reload) { ProfileScreen() } }
+        composable(Routes.DELETE_ACCOUNT) { key(reload) { DeleteAccountScreen() } }
         composable(Routes.SUPPORT) { key(reload) { SupportScreen() } }
         composable(Routes.ADMIN) { key(reload) { AdminScreen() } }
         composable(
