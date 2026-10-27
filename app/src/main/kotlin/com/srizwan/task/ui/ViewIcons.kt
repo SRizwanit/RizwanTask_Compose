@@ -36,6 +36,7 @@ private val VIEW_ICON_PATHS: Map<String, List<String>> = mapOf(
     "checkc" to listOf("M22 11.08V12a10 10 0 1 1-5.93-9.14", "M22 4L12 14.01L9 11.01"),
     "square" to listOf("M5 3H19a2 2 0 0 1 2 2V19a2 2 0 0 1 -2 2H5a2 2 0 0 1 -2 -2V5a2 2 0 0 1 2 -2z"),
     "checksq" to listOf("M9 11L12 14L22 4", "M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"),
+    "globe" to listOf("M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0", "M2 12H22", "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"),
     "trash" to listOf("M3 6L5 6L21 6", "M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"),
     "play" to listOf("M6 3L20 12L6 21L6 3z"),
     "pause" to listOf("M7 4H9a1 1 0 0 1 1 1V19a1 1 0 0 1 -1 1H7a1 1 0 0 1 -1 -1V5a1 1 0 0 1 1 -1z", "M15 4H17a1 1 0 0 1 1 1V19a1 1 0 0 1 -1 1H15a1 1 0 0 1 -1 -1V5a1 1 0 0 1 1 -1z"),
