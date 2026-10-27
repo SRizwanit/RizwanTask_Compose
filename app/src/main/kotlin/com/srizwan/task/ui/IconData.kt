@@ -47,4 +47,6 @@ internal val ICON_PATHS: Map<String, List<IconPath>> = mapOf(
     "play" to listOf(IconPath("M6 3L20 12L6 21L6 3z")),
     "target" to listOf(IconPath("M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0"), IconPath("M6 12a6 6 0 1 0 12 0a6 6 0 1 0 -12 0"), IconPath("M10 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0")),
     "download" to listOf(IconPath("M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"), IconPath("M7 10L12 15L17 10"), IconPath("M12 15L12 3")),
+    // step 4-ka: Feather "file-text", used by the admin book list "পিডিএফ দেখুন" button
+    "pdf" to listOf(IconPath("M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"), IconPath("M14 2v6h6"), IconPath("M16 13H8"), IconPath("M16 17H8"), IconPath("M10 9H8")),
 )
