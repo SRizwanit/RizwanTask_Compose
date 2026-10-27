@@ -146,6 +146,10 @@ object PdfFetch {
                     if (!r.isSuccessful) throw PdfFetchException("ডাউনলোড হয়নি (কোড ${r.code})")
                     val body = r.body ?: throw PdfFetchException("সার্ভার থেকে ফাইল আসেনি")
                     val total = body.contentLength()
+                    // 4-gha: a big PDF must not fill the phone; refuse early with a clear message (30 MB spare is kept)
+                    if (total > 0 && target.parentFile?.usableSpace?.let { it < total + 30L * 1024 * 1024 } == true) {
+                        throw PdfFetchException("ফোনে পর্যাপ্ত জায়গা নেই (PDF প্রায় " + (total / 1048576) + " MB)")
+                    }
                     var done = 0L
                     var lastPct = -1
                     var lastReport = 0L
