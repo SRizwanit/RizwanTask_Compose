@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.material3.AlertDialog
@@ -197,7 +199,8 @@ fun ViewPage(env: ViewEnv, wantPage: String?) {
     ViewProofSyncEffect(st)
     LaunchedEffect(st) { st.start(wantPage) }
     // keyboard shortcuts: the root takes the keys before the text box (React `document.addEventListener('keydown', onKey)`)
-    ViewRippleHost { Column(Modifier.fillMaxSize().onPreviewKeyEvent { st.onKey(it) }) {   // React `useRipple()` — green ripple look for every button of the page
+    ViewRippleHost { Box(Modifier.fillMaxSize().background(viewColors().bg)) { Column(Modifier.fillMaxSize().systemBarsPadding().imePadding().onPreviewKeyEvent { st.onKey(it) }) {   // status / navigation bar safe area + keyboard (adjustResize) never cover the page
+          // React `useRipple()` — green ripple look for every button of the page
         // header (4-ঞ-৩-ক) and status bar (খ); image / text panes (গ, ঘ) and the footer (ঙ) come next and take the rest of the column
         ViewHeader(env, st, tts, api, settings, onBack = { Nav.go(Routes.TASK, replace = true) }, onReload = { scope.launch { st.reload(wantPage) } })
         ViewStatusBar(env, st, api, lens)
@@ -211,7 +214,7 @@ fun ViewPage(env: ViewEnv, wantPage: String?) {
             else { ViewImagePane(env, st, imgScroll, imagePane); ViewTextPane(env, st, tts, api, textEd, imagePane) }
         }
         ViewFooter(env, st)
-    } }
+    } } }
     // download button: React `imagesRef.current[curRef.current].name` (null when no page is open)
     ApiDialogs(env, api, st.images.getOrNull(st.cur)?.stem)     // React `<ApiDialogs …/>` (4-chha-3)
     TtsDialog(env, tts, picker)                                 // React `<TtsDialog … />` (4-jha-3)
