@@ -104,7 +104,7 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
 
     /** React `busy` — a save is running (set by the save step 4-ঘ-২). */
     var busy by mutableStateOf(false)
-    var viewReady = false; private set
+    var viewReady by mutableStateOf(false); private set
     var restoreOnce = true; private set
 
     /** React `doneCnt` (null = not known yet). */
@@ -166,8 +166,10 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
     var reviews: MutableMap<String, Review> = mutableMapOf()
     /** React `ownerNamesRef` — user id -> name (admin only). */
     val ownerNames: MutableMap<String, String> = mutableMapOf()
-    var initing = false; private set
-    var initFailed = false; private set
+    var initing by mutableStateOf(false); private set
+    var initFailed by mutableStateOf(false); private set
+    /** Reason text of the last failed [init] (shown by the loading screen's problem toast). */
+    var initError by mutableStateOf(""); private set
     var forceInit = false
     /** React `autoTried` — pages API-1 already ran on in this session (4-ছ-৪). */
     val autoTried: MutableSet<String> = mutableSetOf()
@@ -509,7 +511,7 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
      */
     suspend fun init(wantPage: String?) {
         if (initing) return
-        initing = true; initFailed = false
+        initing = true; initFailed = false; initError = ""
         autoTried.clear()
         flush()
         statusOverride = "লোড হচ্ছে…"
@@ -599,7 +601,7 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
             goPage(start)
         } catch (e: CancellationException) { throw e
         } catch (e: Exception) {
-            initFailed = true
+            initFailed = true; initError = e.message ?: ""
             statusOverride = ""
             env.toaster.toast("সংযোগ ব্যর্থ: " + (e.message ?: ""), true)
             onOpenSettings()

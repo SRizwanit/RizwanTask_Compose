@@ -27,11 +27,17 @@ import com.srizwan.task.ui.ViewLoadingToast
 import com.srizwan.task.ui.ViewRippleHost
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.srizwan.task.core.AppToast
+import com.srizwan.task.core.Net
+import com.srizwan.task.core.ViewBoot
 import com.srizwan.task.core.ViewCtx
 import com.srizwan.task.core.ViewEntry
 import com.srizwan.task.core.ViewEntryResult
@@ -52,18 +58,35 @@ import androidx.compose.ui.unit.sp
 /**
  * React `View()` wrapper — route `view?book=<id>&page=<stem>`.
  * [bookId] = `?book=`, [wantPage] = `?page=` (the "needs correction" link from the task page opens that page directly).
- * Shows [ViewEntryLoading] until the book + settings are loaded, then [ViewPage].
+ * [ViewEntryLoading] covers the screen from the first frame until the first page is ready: one percentage (Bangla digits) for the whole way
+ * (book + settings here, repo / page list / first image + text in [ViewPage] -> [ViewBootEffect]); never a blank page. No internet / slow
+ * internet / a failed request show a custom toast on it, and when the internet is back the loading starts again by itself.
  */
 @Composable
 fun ViewScreen(bookId: String?, wantPage: String?) {
     var ctx by remember { mutableStateOf<ViewCtx?>(null) }
     var hiddenMsg by remember { mutableStateOf<String?>(null) }
+    val boot = remember { ViewBoot() }
 
-    LaunchedEffect(bookId) {
-        when (val r = ViewEntry.load(bookId)) {
+    // clock of the loading screen: the creeping number + the problem toast (offline / slow / back)
+    LaunchedEffect(boot) { while (!boot.done) { boot.tick(Net.isOnline); delay(250) } }
+    // the app-wide net bar's "আবার চেষ্টা" button also retries this screen while it is loading
+    DisposableEffect(boot) {
+        val h: () -> Boolean = {
+            if (boot.done) false
+            else { if (Net.isOnline) boot.requestRetry() else AppToast.show("এখনো ইন্টারনেট নেই", true); true }
+        }
+        Net.addRetryHandler(h)
+        onDispose { Net.removeRetryHandler(h) }
+    }
+
+    LaunchedEffect(bookId, boot.retryTick) {
+        if (ctx != null) return@LaunchedEffect                 // the book is loaded: a retry now belongs to the page (ViewBootEffect)
+        when (val r = ViewEntry.load(bookId, boot)) {
             is ViewEntryResult.Ready -> ctx = r.ctx
-            is ViewEntryResult.Hidden -> hiddenMsg = r.message
+            is ViewEntryResult.Hidden -> hiddenMsg = r.message         // the dialog opens over the loading screen
             ViewEntryResult.Stay -> Unit
+            ViewEntryResult.Failed -> Unit                     // the loading screen shows the problem; it retries by itself when the internet is back
         }
     }
 
@@ -72,14 +95,18 @@ fun ViewScreen(bookId: String?, wantPage: String?) {
     val toaster = remember { ViewToaster() }
     DisposableEffect(toaster) { onDispose { toaster.dispose() } }
 
-    val c = ctx
-    if (c == null) ViewEntryLoading() else {
-        val apiFlag = remember(c) { ViewApiFlag(c.settings, toaster) }
-        ViewLockEffect(c) { lockedBy = it }
-        ViewApiFlagEffect(apiFlag)
-        val env = remember(c) { ViewEnv(c, toaster, apiFlag) }
-        ViewPage(env, wantPage)
-        ViewLoadingToast(toaster)
+    Box(Modifier.fillMaxSize()) {
+        val c = ctx
+        if (c != null) {
+            val apiFlag = remember(c) { ViewApiFlag(c.settings, toaster) }
+            ViewLockEffect(c) { lockedBy = it }
+            ViewApiFlagEffect(apiFlag)
+            val env = remember(c) { ViewEnv(c, toaster, apiFlag) }
+            ViewPage(env, wantPage, boot)
+            ViewLoadingToast(toaster)
+        }
+        // one instance for the whole way (book load -> page init -> first page), so the card never restarts
+        ViewEntryLoading(boot, onBack = { Nav.go(Routes.TASK, replace = true) })
     }
 
     lockedBy?.let { who ->
@@ -139,7 +166,7 @@ private fun ViewApiFlagEffect(flag: ViewApiFlag) {
  * (`st.openLightbox()` on image tap; `loadPage` closes it). The `init` step (4-ঘ-৫) fills `st.putImages(..)` and calls `st.goPage`/`loadDone`.
  */
 @Composable
-fun ViewPage(env: ViewEnv, wantPage: String?) {
+fun ViewPage(env: ViewEnv, wantPage: String?, boot: ViewBoot? = null) {
     val ctx = env.ctx
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -195,6 +222,7 @@ fun ViewPage(env: ViewEnv, wantPage: String?) {
         tts.refreshVoices()                            // React `useEffect(() => { refreshVoices(); ... })`
         onDispose { tts.stop(); st.onStopTts = {}; st.onOpenSettings = {}; tts.device = null; tts.ask = { cb -> cb() }; api.anyDialogOpen = { false }; dev.shutdown() }
     }
+    if (boot != null) ViewBootEffect(st, boot, wantPage)       // percentage / problems of the loading screen
     ViewLeaveEffect(st)
     ViewProofSyncEffect(st)
     LaunchedEffect(st) { st.start(wantPage) }
@@ -223,6 +251,60 @@ fun ViewPage(env: ViewEnv, wantPage: String?) {
     ViewSaveWaitDialog(st)                                      // "সেভ ও পরের": ৩০ সেকেন্ডের কাউন্টডাউন ডায়ালগ
     SettingsDialog(env, tts, settings)                          // React `<SettingsDialog … />` (4-nya-1) — admin only
     ViewLightbox(st.lightbox) { scope.launch { env.downloadCurrent(context, st.currentName ?: st.lightbox.title.ifEmpty { null }) } }
+}
+
+/** What [ViewBootEffect] watches in [ViewPageState] while the first page comes up. */
+private data class BootSnap(
+    val initing: Boolean, val failed: Boolean, val error: String, val hasList: Boolean, val opened: Boolean,
+    val imgDone: Boolean, val imgPct: Float, val txtDone: Boolean, val pageErr: Boolean
+)
+
+/**
+ * Feeds the loading screen ([ViewBoot]) from the page's own state, from 45% to 100%:
+ * 45-80 repo + page list, 80-88 owners / opening the page, 88-100 the first page image (its real download %) and text.
+ * A failed init -> the problem toast with the reason; the loading screen is left only when the first page is really there
+ * (or when nothing is going to load: admin settings dialog first). A page that failed while the phone is offline keeps the screen,
+ * so the retry (button, or the internet coming back) reloads everything ([ViewPageState.reload]).
+ */
+@Composable
+private fun ViewBootEffect(st: ViewPageState, boot: ViewBoot, wantPage: String?) {
+    LaunchedEffect(st, boot) {
+        snapshotFlow {
+            BootSnap(
+                initing = st.initing, failed = st.initFailed, error = st.initError,
+                hasList = st.images.isNotEmpty(), opened = st.cur >= 0,
+                imgDone = !st.ldrOn && (st.image != null || st.imgMsg.isNotEmpty()),
+                imgPct = if (st.image != null) 100f else (st.ldrPct ?: 0f),
+                txtDone = !st.taLoading || st.loadErr,
+                pageErr = st.loadErr || (st.image == null && st.imgMsg.isNotEmpty())
+            )
+        }.collectLatest { s ->
+            if (boot.done) return@collectLatest
+            val pageEnd = s.opened && s.imgDone && s.txtDone
+            when {
+                pageEnd -> {
+                    if (s.pageErr && !Net.isOnline) boot.fail("ছবি বা লেখা আনা যায়নি। ইন্টারনেট ফিরলে আবার লোড হবে।")
+                    else boot.finish()
+                }
+                s.failed -> boot.fail(s.error)
+                s.initing && !s.hasList -> { boot.clearFail(); boot.stage(45f, 80f, "রিপোজিটরি ও পেইজ তালিকা আনা হচ্ছে…") }
+                s.initing && s.hasList && !s.opened -> boot.stage(80f, 88f, "পেইজ প্রস্তুত করা হচ্ছে…")
+                s.opened -> {
+                    boot.stage(88f, 99f, "পেইজের ছবি ও লেখা আনা হচ্ছে…")
+                    boot.reach(88f + 8f * (s.imgPct / 100f).coerceIn(0f, 1f) + (if (s.txtDone) 3f else 0f))
+                }
+                else -> { delay(1200); boot.finish() }          // nothing is loading (admin's settings dialog, or no page is left for this user): show the page
+            }
+        }
+    }
+    // a retry started from the loading screen (button / internet back) while the page is the one loading
+    var seen by remember { mutableIntStateOf(boot.retryTick) }
+    LaunchedEffect(boot.retryTick) {
+        if (boot.retryTick != seen) {
+            seen = boot.retryTick
+            if (!boot.done) st.reload(wantPage)
+        }
+    }
 }
 
 /**
