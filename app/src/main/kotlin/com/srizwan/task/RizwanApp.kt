@@ -4,6 +4,7 @@ import android.app.Application
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import com.srizwan.task.core.CrashHandler
 import com.srizwan.task.core.Device
 import com.srizwan.task.core.MotionStore
 import com.srizwan.task.core.Net
@@ -20,6 +21,10 @@ import com.srizwan.task.ui.CoverImages
 class RizwanApp : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
+        // The crash screen runs in its own ":crash" process: no app services there.
+        if (CrashHandler.isCrashProcess()) return
+        // First thing: any later crash (even in the init below) opens the debug screen.
+        CrashHandler.install(this)
         Prefs.init(this)
         Device.init(this)
         ThemeStore.load()
