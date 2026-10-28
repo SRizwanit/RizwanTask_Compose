@@ -52,6 +52,7 @@ class TtsDevice(context: Context, private val onVoicesChanged: () -> Unit) {
             override fun onStart(utteranceId: String) { main.post { if (utteranceId == curId) cur?.onStart?.invoke() } }
             override fun onDone(utteranceId: String) { main.post { if (utteranceId == curId) cur?.onEnd?.invoke() } }
             @Deprecated("Deprecated in Java")
+            @Suppress("OVERRIDE_DEPRECATION")
             override fun onError(utteranceId: String) { main.post { if (utteranceId == curId) cur?.onError?.invoke("synthesis-failed") } }
             override fun onError(utteranceId: String, errorCode: Int) {
                 val e = when (errorCode) {
