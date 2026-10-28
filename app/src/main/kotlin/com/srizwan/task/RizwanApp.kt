@@ -43,6 +43,7 @@ class RizwanApp : Application(), SingletonImageLoader.Factory {
         ThemeStore.load(); Crumb.mark(this, "ThemeStore ok")
         MotionStore.init(this); Crumb.mark(this, "MotionStore ok")
         ViewImageDisk.init(this); Crumb.mark(this, "ViewImageDisk ok")
+        com.srizwan.task.screens.task.TaskCache.init(this); Crumb.mark(this, "TaskCache ok")
         Net.init(this); Crumb.mark(this, "Net ok")
         Push.init(this); Crumb.mark(this, "Push ok")
         Crumb.mark(this, "Application.onCreate done")
