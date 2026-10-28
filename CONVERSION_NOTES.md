@@ -208,6 +208,8 @@ PWA install prompt (`Install`), service worker, `runLegacy`, `PageShell` (browse
 - WorkManager প্রতি ১৫ মিনিটে (নেট থাকলে) নতুন নোটিশ (`id > শেষ দেখা`) এনে সিস্টেম নোটিফিকেশন দেখায়; প্রথমবার শুধু মার্কার বসে (পুরনো নোটিশের বন্যা নেই); অ্যাপ খুললে মার্কার এগোয় (ওই নোটিশ অ্যাপের ডায়ালগেই দেখায়, ডুপ্লিকেট নয়)।
 - অনুমতি: `POST_NOTIFICATIONS` (Manifest) + Android 13+ এ সাইন-ইন যাচাইয়ের পর ব্যাখ্যার ডায়ালগ → সিস্টেম অনুমতি (সর্বোচ্চ ২ বার জিজ্ঞেস)। চ্যানেল `rt_notices`।
 - নির্ভরতা: `androidx.work:work-runtime-ktx:2.10.0`।
+- আইকন: ভেক্টর ঘণ্টা (path data) কোডেই আঁকা — `Push.kt`-এ `BELL` পাথ থেকে সাদা bitmap → `IconCompat.createWithBitmap`; আলাদা XML রিসোর্স লাগে না।
+- ফিক্স: `TaskNav.kt` — `BoxWithConstraints`-এর `maxWidth` `Row`-এর ভেতরে সরাসরি না নিয়ে বাইরে `val wide` করা; `app/build.gradle.kts` — `variant.buildConfigFields?.put(`।
 - সীমা: অ্যাপ বন্ধ থাকলে দেরি ≤ ~১৫ মিনিট (Android-এর সর্বনিম্ন)। সাথে সাথে পুশ লাগলে FCM + Firebase প্রজেক্ট (`google-services.json`) + Supabase Edge Function/ডেটাবেস ওয়েবহুক লাগবে।
 
 **র‍্যাংকে ব্যাজ** — `screens/task/TaskRewards.kt`, `TaskRank.kt`
