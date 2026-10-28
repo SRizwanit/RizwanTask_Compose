@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -41,6 +42,7 @@ import com.srizwan.task.ui.ErrText
 import com.srizwan.task.ui.FieldLabel
 import com.srizwan.task.ui.HintText
 import com.srizwan.task.ui.LinkButton
+import com.srizwan.task.ui.PinSuccessOverlay
 import com.srizwan.task.ui.PrimaryButton
 import com.srizwan.task.ui.Spinner
 import com.srizwan.task.screens.LoginViewModel.PinMode
@@ -53,8 +55,11 @@ private fun digitsOnly(v: String) = v.filter { it.isDigit() }
 fun LoginScreen(vm: LoginViewModel = viewModel()) {
     val ctx = LocalContext.current
     val cs = MaterialTheme.colorScheme
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(Unit) { vm.checkExistingSession() }
+    // PIN accepted: hide the keyboard while the success animation plays
+    LaunchedEffect(vm.welcomePin) { if (vm.welcomePin != null) focusManager.clearFocus() }
 
     val phoneFocus = remember { FocusRequester() }
     val otpFocus = remember { FocusRequester() }
@@ -187,6 +192,9 @@ fun LoginScreen(vm: LoginViewModel = viewModel()) {
                 }
             }
         }
+
+        // PIN accepted -> digits whirl, ring counts 0..100, tick mark, then the Task screen opens
+        vm.welcomePin?.let { PinSuccessOverlay(pin = it, onFinished = vm::onWelcomeDone) }
     }
 
     // OTP dialog (`#otpDlg`)

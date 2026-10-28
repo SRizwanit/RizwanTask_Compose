@@ -172,13 +172,25 @@ class LoginViewModel : ViewModel() {
         }
     }
 
+    /** The 4 digits of the accepted PIN while the success animation plays (null = not playing). */
+    var welcomePin by mutableStateOf<String?>(null); private set
+
+    // The session is saved at once; the Task screen opens when the PIN success animation is over (see onWelcomeDone).
     private suspend fun finish(u: AppUser) {
         Session.set(u)
         ActivityLog.log("login", "", u.id, u.fullName)
+        welcomePin = pin
+    }
+
+    /** Called by the PIN success animation when it has finished. */
+    fun onWelcomeDone() {
+        if (welcomePin == null) return
+        welcomePin = null
         Nav.go(Routes.TASK, replace = true)
     }
 
     fun onPin() {
+        if (welcomePin != null) return
         if (pin.length != 4) { err = "৪ ডিজিটের PIN দিন"; return }
         if (mode != PinMode.LOGIN && pin != pin2) { err = "দুটি PIN মিলছে না"; return }
         val dev = Device.id()
