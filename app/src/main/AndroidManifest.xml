@@ -29,7 +29,7 @@
     <application
         android:name=".RizwanApp"
         android:allowBackup="false"
-        android:icon="@drawable/rizwantask"
+        android:icon="@drawable/rizwantaskgolden"
         android:label="RizwanTask"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
