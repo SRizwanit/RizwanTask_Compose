@@ -62,7 +62,8 @@ fun TaskHeader(
 ) {
     // admin: the two text buttons would squeeze everything else out on a phone -> icon-only there
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val showTitle = !isAdmin || maxWidth > 430.dp
+        val wide = maxWidth > 430.dp   // read here: inside Row the BoxWithConstraints scope is not reachable
+        val showTitle = !isAdmin || wide
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -84,8 +85,8 @@ fun TaskHeader(
                 }
             }
             if (isAdmin) {
-                HeaderBtn(if (maxWidth > 430.dp) "অ্যাডমিন" else "", "shield", onClick = onAdmin)
-                HeaderBtn(if (maxWidth > 430.dp) "লগআউট" else "", "logout", onClick = onLogout)
+                HeaderBtn(if (wide) "অ্যাডমিন" else "", "shield", onClick = onAdmin)
+                HeaderBtn(if (wide) "লগআউট" else "", "logout", onClick = onLogout)
             }
         }
     }
