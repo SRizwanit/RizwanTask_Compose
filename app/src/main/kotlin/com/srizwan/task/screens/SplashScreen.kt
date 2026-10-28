@@ -147,7 +147,7 @@ fun SplashScreen(onFinished: () -> Unit) {
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.rizwantask),
+                        painter = painterResource(id = R.drawable.rizwantaskgolden),
                         contentDescription = "RizwanTask logo",
                         modifier = Modifier.size(118.dp),
                         contentScale = ContentScale.Fit
