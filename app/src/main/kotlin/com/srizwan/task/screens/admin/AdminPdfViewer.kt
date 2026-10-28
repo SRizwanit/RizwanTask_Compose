@@ -170,6 +170,7 @@ fun AdminPdfViewer(title: String, pdfLink: String, onClose: () -> Unit) {
     DisposableEffect(Unit) {
         val cb = object : ComponentCallbacks2 {
             override fun onTrimMemory(level: Int) { engineNow?.trim(level) }
+            @Suppress("OVERRIDE_DEPRECATION")
             override fun onLowMemory() { engineNow?.clearCache() }
             override fun onConfigurationChanged(newConfig: Configuration) {}
         }

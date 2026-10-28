@@ -142,7 +142,7 @@ suspend fun fetchRunState(S: JSONObject, b: JSONObject, info: RunInfo, onId: (St
             .filter { (Fmt.parseInstant(it.optString("created_at"))?.toEpochMilli() ?: 0L) >= t }
             .minByOrNull { Fmt.parseInstant(it.optString("created_at"))?.toEpochMilli() ?: 0L }
             ?: return RunState("queued")
-        id = cand.opt("id").toString(); onId(id)
+        id = cand.opt("id")?.toString() ?: ""; onId(id)
     }
     val r = gh(S, b, "/actions/runs/$id")
     if (!r.ok) throw Exception(ghErr(r))
