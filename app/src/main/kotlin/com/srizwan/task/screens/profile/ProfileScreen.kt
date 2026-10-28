@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,6 +56,8 @@ import com.srizwan.task.core.Net
 import com.srizwan.task.core.Phone
 import com.srizwan.task.core.Sb
 import com.srizwan.task.core.ThemeMode
+import com.srizwan.task.core.MotionPref
+import com.srizwan.task.core.MotionStore
 import com.srizwan.task.core.ThemeStore
 import com.srizwan.task.core.enc
 import com.srizwan.task.core.jsonOf
@@ -64,6 +67,7 @@ import com.srizwan.task.core.str
 import com.srizwan.task.nav.Nav
 import com.srizwan.task.screens.task.CountChip
 import com.srizwan.task.screens.task.HeaderBtn
+import com.srizwan.task.screens.task.HeaderTitle
 import com.srizwan.task.screens.task.NoticeDialog
 import com.srizwan.task.screens.task.TaskBottomNav
 import com.srizwan.task.screens.task.TaskData
@@ -73,6 +77,7 @@ import com.srizwan.task.ui.AppLogo
 import com.srizwan.task.ui.BlockButton
 import com.srizwan.task.ui.FieldLabel
 import com.srizwan.task.ui.OutlineButton
+import com.srizwan.task.ui.PalettePicker
 import com.srizwan.task.ui.SegChoice
 import com.srizwan.task.ui.ThemeToggleButton
 import com.srizwan.task.ui.errColor
@@ -272,22 +277,21 @@ fun ProfileScreen() {
 /** React `header.top` of the profile page. */
 @Composable
 private fun ProfileHeader(myCount: Int?, isAdmin: Boolean, onAdmin: () -> Unit, onLogout: () -> Unit) {
-    val cs = MaterialTheme.colorScheme
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        AppLogo(size = 30.dp)
-        Text(
-            "প্রোফাইল", color = cs.onBackground, fontSize = 17.sp, fontWeight = FontWeight.Bold,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
-        )
-        if (myCount != null) CountChip(myCount)
-        ThemeToggleButton()
-        if (isAdmin) {
-            HeaderBtn("অ্যাডমিন", "shield", onClick = onAdmin)
-            HeaderBtn("লগআউট", "logout", onClick = onLogout)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val wide = maxWidth > 430.dp
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            AppLogo(size = 30.dp)
+            if (!isAdmin || wide) HeaderTitle("প্রোফাইল", Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
+            if (myCount != null) CountChip(myCount)
+            ThemeToggleButton()
+            if (isAdmin) {
+                HeaderBtn(if (wide) "অ্যাডমিন" else "", "shield", onClick = onAdmin)
+                HeaderBtn(if (wide) "লগআউট" else "", "logout", onClick = onLogout)
+            }
         }
     }
 }
@@ -349,6 +353,32 @@ private fun ProfileCard(
                     ThemeStore.set(when (v) { "light" -> ThemeMode.LIGHT; "dark" -> ThemeMode.DARK; else -> ThemeMode.AUTO })
                     AppToast.show("থিম: " + ThemeStore.label())
                 }
+            )
+
+            // design theme: garden / ocean / twilight (colours + animated background); day / night stays above
+            FieldLabel("ডিজাইন থিম", Modifier.padding(top = 2.dp))
+            PalettePicker(
+                selected = ThemeStore.palette,
+                onSelect = { p ->
+                    ThemeStore.setPalette(p)
+                    AppToast.show("ডিজাইন থিম: " + p.label)
+                }
+            )
+
+            // background animation: auto (battery saver / phone animations off) / full / slow / still
+            FieldLabel("অ্যানিমেশন কমান", Modifier.padding(top = 2.dp))
+            SegChoice(
+                MotionPref.entries.map { it.key to it.label },
+                selected = MotionStore.pref.key,
+                onSelect = { v ->
+                    val m = MotionPref.of(v)
+                    MotionStore.set(m)
+                    AppToast.show("ব্যাকগ্রাউন্ড অ্যানিমেশন: " + m.label)
+                }
+            )
+            Text(
+                MotionStore.hint(), color = cs.onSurfaceVariant, fontSize = 11.5.sp, lineHeight = 17.sp,
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
             )
 
             // React `#bEdit`: opens the payment number dialog

@@ -128,7 +128,7 @@ fun DeleteAccountScreen() {
                         .clickable(enabled = !busy) { Nav.go("profile") },
                     contentAlignment = Alignment.Center
                 ) { AppIcon("left", size = 18.dp, tint = cs.onSurface) }
-                Text("অ্যাকাউন্ট মুছুন", color = cs.onBackground, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                com.srizwan.task.screens.task.HeaderTitle("অ্যাকাউন্ট মুছুন", Modifier.weight(1f))
             }
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.TopCenter) {
                 Column(
