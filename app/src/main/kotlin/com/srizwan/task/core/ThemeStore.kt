@@ -26,7 +26,8 @@ object ThemeStore {
     var palette by mutableStateOf(AppPalette.GARDEN)
         private set
 
-    fun setPalette(p: AppPalette) {
+    /** Renamed from setPalette to avoid a JVM clash with the generated private setter. */
+    fun choosePalette(p: AppPalette) {
         palette = p
         if (p == AppPalette.GARDEN) Prefs.remove(PK) else Prefs.putString(PK, p.key)
     }
