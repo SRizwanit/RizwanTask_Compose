@@ -1,8 +1,9 @@
+import com.android.build.api.variant.BuildConfigField
 import java.util.Properties
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    // Kotlin support is built into AGP 9+, so the old "org.jetbrains.kotlin.android" plugin is gone.
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
@@ -10,16 +11,22 @@ plugins {
 // App configuration (React .env -> BuildConfig). Looked up in this order:
 //   1) environment variable  2) local.properties  3) gradle -P property
 // Names: SUPABASE_URL, SUPABASE_KEY, ADMIN_PHONE, ADMIN_WA
+// Everything is a lazy Provider (no eager file/env reads while Gradle configures) and the values
+// are pushed into BuildConfig through the variant API (androidComponents.onVariants) below.
 // ---------------------------------------------------------------------------
-val localProps = Properties().apply {
-    val f = rootProject.file("local.properties")
-    if (f.exists()) f.inputStream().use { load(it) }
-}
+val localProps: Provider<Properties> = providers
+    .fileContents(rootProject.layout.projectDirectory.file("local.properties"))
+    .asText
+    .map { text -> Properties().apply { text.reader().use { load(it) } } }
 
-fun cfg(name: String): String {
-    val raw = System.getenv(name) ?: localProps.getProperty(name) ?: (findProperty(name) as String?) ?: ""
-    return raw.trim().replace("\\", "\\\\").replace("\"", "\\\"")
-}
+fun cfg(name: String): Provider<String> =
+    providers.environmentVariable(name)
+        .orElse(localProps.map { it.getProperty(name) })   // null (key missing) = no value -> falls through
+        .orElse(providers.gradleProperty(name))
+        .orElse("")
+        .map { it.trim().replace("\\", "\\\\").replace("\"", "\\\"") }
+
+val buildConfigKeys = listOf("SUPABASE_URL", "SUPABASE_KEY", "ADMIN_PHONE", "ADMIN_WA")
 
 android {
     namespace = "com.srizwan.task"
@@ -33,10 +40,6 @@ android {
         versionName = "1.0.0"
         vectorDrawables.useSupportLibrary = true
 
-        buildConfigField("String", "SUPABASE_URL", "\"${cfg("SUPABASE_URL")}\"")
-        buildConfigField("String", "SUPABASE_KEY", "\"${cfg("SUPABASE_KEY")}\"")
-        buildConfigField("String", "ADMIN_PHONE", "\"${cfg("ADMIN_PHONE")}\"")
-        buildConfigField("String", "ADMIN_WA", "\"${cfg("ADMIN_WA")}\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -73,6 +76,18 @@ kotlin {
     jvmToolchain(17)
 }
 
+// Variant API: BuildConfig fields are lazy providers (replaces defaultConfig.buildConfigField).
+androidComponents {
+    onVariants { variant ->
+        buildConfigKeys.forEach { key ->
+            variant.buildConfigFields.put(
+                key,
+                cfg(key).map { value -> BuildConfigField("String", "\"$value\"", null) }
+            )
+        }
+    }
+}
+
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2025.10.00")
     implementation(composeBom)
@@ -94,6 +109,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.datastore:datastore-preferences:1.1.7")
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
