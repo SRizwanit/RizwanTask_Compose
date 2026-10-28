@@ -381,13 +381,14 @@ fun Forecast(s: Summary, min: Double, dr: Double) {
                 val tip = if (s.available >= min) "এখনই রিকোয়েস্ট করার মতো পয়েন্টস আছে।"
                 else if (allAvail >= min) "রিভিউ হয়ে গেলে ন্যূনতম পেমেন্ট (${Fmt.money(min)}) ছুঁয়ে রিকোয়েস্ট করতে পারবেন।"
                 else "ন্যূনতম পেমেন্ট (${Fmt.money(min)}) ছুঁতে আরও ≈ ${Fmt.bn(Math.ceil((min - allAvail) / dr).toLong())} পেইজ প্রুফ করতে হবে।"
-                val showApr = apr != null && apr < 1
+                val aprLow: Double? = apr?.takeIf { it < 1 }       // the approval rate, only when it is below 100%
+                val showApr = aprLow != null
                 FcRow("রিভিউ বাকি ${Fmt.bn(s.pending)} পেইজ সব অনুমোদিত হলে যোগ হবে", "≈ +" + Fmt.money(s.pendingAmt), up = true, dashed = true)
                 FcRow("তখন মোট পয়েন্টস হবে", "≈ " + Fmt.money(allEarn), dashed = true)
                 FcRow("তখন উত্তোলনযোগ্য হবে", "≈ " + Fmt.money(allAvail), dashed = showApr)
-                if (showApr && apr != null) FcRow(
-                    "আপনার অনুমোদনের হার ${Fmt.bn(Math.round(apr * 100))}% — সেই হিসাবে যোগ হবে",
-                    "≈ +" + Fmt.money(s.pendingAmt * apr), dashed = false
+                if (aprLow != null) FcRow(
+                    "আপনার অনুমোদনের হার ${Fmt.bn(Math.round(aprLow * 100))}% — সেই হিসাবে যোগ হবে",
+                    "≈ +" + Fmt.money(s.pendingAmt * aprLow), dashed = false
                 )
                 Text(
                     "$tip অ্যাডমিন অনুমোদন না দেওয়া পর্যন্ত এটি শুধু আনুমানিক হিসাব।",

@@ -9,7 +9,7 @@ import com.srizwan.task.R
  * Used by the guide scenes (3-ঙ-৩ … ৫) through [GuideImages.get]; [w] x [h] = the pixel size of the image
  * (the scenes draw it stretched to their own width / height, `preserveAspectRatio="none"`).
  */
-class GuideImage(@DrawableRes val res: Int, val w: Int, val h: Int)
+class GuideImage(@param:DrawableRes val res: Int, val w: Int, val h: Int)
 
 object GuideImages {
     private val all: Map<String, GuideImage> = mapOf(

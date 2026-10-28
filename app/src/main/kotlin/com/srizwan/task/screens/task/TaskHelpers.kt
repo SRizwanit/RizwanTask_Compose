@@ -53,7 +53,7 @@ class ResumeRec(val b: String, val s: String)
 
 fun getResume(id: String): ResumeRec? = try {
     val o = JSONObject(Prefs.getString(resumeKey(id)) ?: "null")
-    if (o.has("b") && !o.isNull("b")) ResumeRec(o.opt("b").toString(), o.str("s") ?: "") else null
+    if (o.has("b") && !o.isNull("b")) ResumeRec(o.opt("b")?.toString() ?: "", o.str("s") ?: "") else null
 } catch (e: Exception) { null }
 
 /* ---- streak ---- */
