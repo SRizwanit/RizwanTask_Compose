@@ -57,5 +57,14 @@
             android:windowSoftInputMode="adjustResize"
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
 
+        <!-- Crash debug screen: own process so it still opens when the app process is broken (report -> WhatsApp) -->
+        <activity
+            android:name=".CrashActivity"
+            android:exported="false"
+            android:process=":crash"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode"
+            android:theme="@android:style/Theme.Material.NoActionBar" />
+
     </application>
 </manifest>
