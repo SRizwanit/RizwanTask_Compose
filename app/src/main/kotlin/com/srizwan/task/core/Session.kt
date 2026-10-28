@@ -67,6 +67,7 @@ object Auth {
         _blocked.value = null
         if (admin && !Phone.isAdminPhone(u.phone)) { Nav.go(Routes.TASK, replace = true); return null }
         touchActive(u)
+        com.srizwan.task.push.Push.onSignedIn()
         return u
     }
 

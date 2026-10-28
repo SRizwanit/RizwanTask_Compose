@@ -196,8 +196,7 @@ object ViewUtils {
             val cur = c
             val lang = wordLang(w) ?: (cur?.lang ?: last)
             if (cur != null && (cur.lang != lang || cur.t.length + w.length + 1 > TTS_MAX)) fl()
-            if (c == null) c = TtsChunk("", lang, from + m.range.first)
-            val ch = c!!
+            val ch = c ?: TtsChunk("", lang, from + m.range.first).also { c = it }
             ch.t += (if (ch.t.isNotEmpty()) " " else "") + w
             ch.w.add(TtsWord(ch.t.length - w.length, from + m.range.first + skip, w.length))
             ch.end = from + m.range.last + 1

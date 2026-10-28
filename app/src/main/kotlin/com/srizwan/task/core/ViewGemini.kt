@@ -111,9 +111,10 @@ object ViewGemini {
                 if (!resp.isSuccessful) {
                     val t = withContext(Dispatchers.IO) { try { resp.body?.string().orEmpty() } catch (_: Exception) { "" } }
                     val m = try { JSONObject(t).getJSONObject("error").optString("message", "") } catch (_: Exception) { t.take(200) }
-                    lastErr = Exception(resp.code.toString() + ": " + m.take(300) + geminiHint(resp.code, m))
+                    val httpErr = Exception(resp.code.toString() + ": " + m.take(300) + geminiHint(resp.code, m))
+                    lastErr = httpErr
                     if (resp.code in intArrayOf(500, 502, 503, 504) && att < 3) { ViewUtils.sleep(4000L * att); return@use null }
-                    throw lastErr!!
+                    throw httpErr
                 }
 
                 val chunks = StringBuilder()
@@ -167,9 +168,10 @@ object ViewGemini {
                 var text = jsTrim(chunks.toString())
                 FENCE.find(text)?.let { text = jsTrim(it.groupValues[1]) }   // whole output wrongly wrapped in a code fence — unwrap
                 if (text.isEmpty()) {
-                    lastErr = Exception("খালি রেসপন্স (finishReason=$finish)")
+                    val emptyErr = Exception("খালি রেসপন্স (finishReason=$finish)")
+                    lastErr = emptyErr
                     if (att < 3) { ViewUtils.sleep(3000L * att); return@use null }
-                    throw lastErr!!
+                    throw emptyErr
                 }
                 return GeminiResult(text, finish)
             }

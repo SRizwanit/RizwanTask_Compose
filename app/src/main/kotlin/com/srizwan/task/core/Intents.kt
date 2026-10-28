@@ -51,9 +51,11 @@ fun openWhatsApp(ctx: Context, message: String) =
 
 /** navigator.clipboard.writeText(text) — true when the text was copied. */
 fun copyText(ctx: Context, text: String): Boolean = try {
-    val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    cm.setPrimaryClip(ClipData.newPlainText("text", text))
-    true
+    val cm = ctx.getSystemService(ClipboardManager::class.java)
+    if (cm == null) false else {
+        cm.setPrimaryClip(ClipData.newPlainText("text", text))
+        true
+    }
 } catch (e: Exception) {
     false
 }

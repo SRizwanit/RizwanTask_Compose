@@ -2,6 +2,7 @@ package com.srizwan.task.core
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.LruCache
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.CancellationException
@@ -119,16 +120,33 @@ class ViewGithub(private val getCfg: () -> JSONObject) {
     }
 
     /**
-     * Image cache (at most 6 images) + download percentage.
+     * Image cache + download percentage. Three layers, fastest first:
+     *  1. decoded bitmaps ([bmpCache], limited by size in bytes) — a page opened again shows at once, no decoding;
+     *  2. raw bytes in memory (at most 6 images; the same download is shared by every caller);
+     *  3. raw bytes on the phone's disk ([ViewImageDisk], per repo / branch / folder) — survives app restarts.
      * [onProgress] (name, pct): pct = 0..100, or null when the total size is unknown. Called on the main thread.
      * [scope] runs the downloads (they continue even if the caller stops waiting, like a started Promise).
      */
     fun createImageCache(scope: CoroutineScope = AppScope.scope, onProgress: (String, Float?) -> Unit): ImageCache =
         ImageCache(scope, onProgress)
 
+    /** Folder key of the disk cache: images of another repo / branch / folder never mix. */
+    private fun diskScope(): String {
+        val cfg = getCfg()
+        return cfg.str("repo").orEmpty() + "|" + cfg.str("branch").orEmpty() + "|" + ViewConfig.repoPaths(cfg).pagesDir
+    }
+
     inner class ImageCache(private val scope: CoroutineScope, private val onProgress: (String, Float?) -> Unit) {
         private val cache = LinkedHashMap<String, Deferred<ViewImage>>()   // name -> download
         private val pct = HashMap<String, Float?>()                        // name -> percentage (key present = started)
+        private val decoding = HashMap<String, Deferred<ImageBitmap?>>()   // name -> decode in progress (shared)
+
+        /** Decoded pages, sized in KB (4 bytes per pixel): about 1/6 of the app's memory limit, between 24 and 128 MB. */
+        private val bmpCache = object : LruCache<String, ImageBitmap>(
+            (Runtime.getRuntime().maxMemory() / 1024 / 6).toInt().coerceIn(24 * 1024, 128 * 1024)
+        ) {
+            override fun sizeOf(key: String, value: ImageBitmap): Int = ((value.width.toLong() * value.height * 4) / 1024).toInt().coerceAtLeast(1)
+        }
 
         private val lock = Any()   // downloads finish on IO threads, callers are on the main thread
 
@@ -137,11 +155,12 @@ class ViewGithub(private val getCfg: () -> JSONObject) {
             scope.launch(Dispatchers.Main.immediate) { onProgress(name, p) }
         }
 
-        /** Image bytes; the same download is shared by every caller. Throws with the GitHub error text on failure. */
+        /** Image bytes (memory, then disk, then GitHub); the same download is shared by every caller. Throws with the GitHub error text on failure. */
         suspend fun get(name: String): ViewImage {
             val d = synchronized(lock) {
                 cache[name]?.let { return@synchronized it }
-                val nd = scope.async(Dispatchers.IO) { download(name) }
+                val sc = diskScope()
+                val nd = scope.async(Dispatchers.IO) { load(sc, name) }
                 cache[name] = nd
                 nd.invokeOnCompletion { e ->
                     if (e != null) synchronized(lock) { if (cache[name] === nd) cache.remove(name); pct.remove(name) }
@@ -150,6 +169,53 @@ class ViewGithub(private val getCfg: () -> JSONObject) {
                 nd
             }
             return d.await()
+        }
+
+        /** Disk first (no network at all), else download and save to disk. */
+        private suspend fun load(sc: String, name: String): ViewImage {
+            ViewImageDisk.read(sc, name)?.let { b ->
+                prog(name, 100f)
+                return ViewImage(b, ViewUtils.MIME_BY_EXT[ViewUtils.extOf(name)] ?: "image/jpeg")
+            }
+            val vi = download(name)
+            ViewImageDisk.write(sc, name, vi.bytes)
+            return vi
+        }
+
+        /** The decoded page if it is already in memory (null = not yet). Instant, safe on the main thread. */
+        fun peekBitmap(name: String): ImageBitmap? = bmpCache.get(name)
+
+        /**
+         * The decoded page: from the bitmap cache, else [get] + decode (off the main thread). One decode is shared by every
+         * caller. null = the bytes are not a readable image (the bad copy is dropped from memory and disk, so the next try downloads again).
+         */
+        suspend fun getBitmap(name: String): ImageBitmap? {
+            bmpCache.get(name)?.let { return it }
+            val d = synchronized(lock) {
+                decoding[name] ?: scope.async(Dispatchers.Default) { decodeNow(name) }.also { nd ->
+                    decoding[name] = nd
+                    nd.invokeOnCompletion { synchronized(lock) { if (decoding[name] === nd) decoding.remove(name) } }
+                }
+            }
+            return d.await()
+        }
+
+        private suspend fun decodeNow(name: String): ImageBitmap? {
+            bmpCache.get(name)?.let { return it }
+            val vi = get(name)
+            val bmp = vi.decode()
+            if (bmp == null) {
+                ViewImageDisk.remove(diskScope(), name)
+                synchronized(lock) { cache.remove(name); pct.remove(name) }
+            } else bmpCache.put(name, bmp)
+            return bmp
+        }
+
+        /** Loads [name] in the background so it is ready when the reader gets there. [decode] = also decode it into the bitmap cache. */
+        fun prefetch(name: String, decode: Boolean) {
+            scope.launch {
+                try { if (decode) getBitmap(name) else get(name) } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+            }
         }
 
         private suspend fun download(name: String): ViewImage {
@@ -175,7 +241,11 @@ class ViewGithub(private val getCfg: () -> JSONObject) {
             }
         }
 
-        fun clear() { synchronized(lock) { cache.clear() } }
+        /** Memory only (decoded pages, bytes, percentages); the disk copies stay. React `imgCache.clear()`. */
+        fun clear() { synchronized(lock) { cache.clear(); pct.clear(); decoding.clear() }; bmpCache.evictAll() }
+
+        /** Memory + the disk copies of the current repo / branch / folder: the reload button, so every page is downloaded fresh. */
+        fun clearAll() { clear(); ViewImageDisk.clear(diskScope()) }
         fun has(name: String): Boolean = synchronized(lock) { pct.containsKey(name) }
         /** Last percentage of [name] (null = unknown / not started). */
         fun pct(name: String): Float? = synchronized(lock) { pct[name] }

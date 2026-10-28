@@ -60,10 +60,13 @@ object Device {
     fun all(): List<String> = listOfNotNull(hardwareId(), legacyId()).distinct().ifEmpty { listOf(id()) }
 
     /** True when [stored] (an `app_users.device_id`) belongs to this phone. */
-    fun matches(stored: String?): Boolean = !isEmpty(stored) && stored!!.trim() in all()
+    fun matches(stored: String?): Boolean {
+        val s = stored?.trim() ?: return false
+        return !isEmpty(s) && s in all()
+    }
 
     /** True when the row is bound to this phone but still under an old id -> should be moved to [id]. */
-    fun needsUpgrade(stored: String?): Boolean = matches(stored) && stored!!.trim() != id()
+    fun needsUpgrade(stored: String?): Boolean = matches(stored) && stored?.trim() != id()
 
     fun isEmpty(d: String?): Boolean = d == null || d.trim().isEmpty() || d.trim().lowercase() == "null"
 }
