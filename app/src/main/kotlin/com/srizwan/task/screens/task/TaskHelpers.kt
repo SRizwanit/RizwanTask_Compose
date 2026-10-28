@@ -29,7 +29,7 @@ val PM = mapOf("bkash" to "বিকাশ", "nagad" to "নগদ")
 fun minPayout(S: JSONObject): Double = S.finiteNum("min_payout") ?: DEF_MIN.toDouble()
 
 /** React `KIND`: notice kind -> label. */
-val NOTICE_KIND = mapOf("notice" to "ঘোষণা", "review" to "রিভিউ", "payment" to "পেমেন্ট")
+val NOTICE_KIND = mapOf("notice" to "ঘোষণা", "review" to "রিভিউ", "payment" to "পেমেন্ট", "reward" to "রিওয়ার্ড")
 
 /** React `rateTxt`: "১২.০০ পয়েন্টস". */
 fun rateTxt(r: Double): String = Fmt.money(r)

@@ -41,6 +41,7 @@ import com.srizwan.task.ui.AppIcon
 import com.srizwan.task.ui.AppLogo
 import com.srizwan.task.ui.errColor
 import com.srizwan.task.ui.goldColor
+import com.srizwan.task.ui.hapticClickable
 
 /** Play Store page of the app — used by the rate and share buttons of [ExitDialog]. */
 private const val PLAY_URL = "https://play.google.com/store/apps/details?id=com.srizwan.task"
@@ -115,7 +116,7 @@ fun ExitDialog(onDismiss: () -> Unit) {
                 // close (stay in the app)
                 Box(
                     Modifier.align(Alignment.TopEnd).padding(10.dp).size(32.dp).clip(CircleShape)
-                        .clickable(onClick = onDismiss),
+                        .hapticClickable(onClick = onDismiss),
                     contentAlignment = Alignment.Center
                 ) { AppIcon("x", size = 18.dp, tint = cs.onSurfaceVariant) }
             }
@@ -135,7 +136,7 @@ private fun ExitAction(label: String, icon: String, tone: Color, filled: Boolean
                 if (filled) Modifier.background(tone)
                 else Modifier.background(tone.copy(alpha = 0.10f)).border(1.dp, tone.copy(alpha = 0.65f), shape)
             )
-            .clickable(onClick = onClick)
+            .hapticClickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center

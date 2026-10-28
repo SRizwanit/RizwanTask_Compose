@@ -5,8 +5,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,7 +31,9 @@ import com.srizwan.task.ui.AppIcon
 import com.srizwan.task.ui.AppLogo
 import com.srizwan.task.ui.ThemeToggleButton
 import com.srizwan.task.ui.errColor
+import com.srizwan.task.ui.glass
 import com.srizwan.task.ui.goldColor
+import com.srizwan.task.ui.hapticClickable
 
 /** React Task.jsx `TITLES`. */
 val TASK_TITLES = mapOf("task" to "টাস্কের তালিকা", "pay" to "পেমেন্ট", "rank" to "লিডারবোর্ড")
@@ -56,33 +60,46 @@ fun TaskHeader(
     onAdmin: () -> Unit,
     onLogout: () -> Unit
 ) {
-    val cs = MaterialTheme.colorScheme
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        AppLogo(size = 30.dp)
-        Text(
-            TASK_TITLES[tab].orEmpty(), color = cs.onBackground, fontSize = 17.sp, fontWeight = FontWeight.Bold,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
-        )
-        if (myCount != null) CountChip(myCount)
-        ThemeToggleButton()
-        // profile button + red badge
-        Box {
-            HeaderBtn("", "user", onClick = onProfile)
-            if (badge > 0) {
-                Box(
-                    Modifier.align(Alignment.TopEnd).clip(CircleShape).background(errColor())
-                        .padding(horizontal = 5.dp)
-                ) { Text(if (badge > 99) "৯৯+" else Fmt.bn(badge), color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.Bold) }
+    // admin: the two text buttons would squeeze everything else out on a phone -> icon-only there
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val showTitle = !isAdmin || maxWidth > 430.dp
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            AppLogo(size = 30.dp)
+            if (showTitle) HeaderTitle(TASK_TITLES[tab].orEmpty(), Modifier.weight(1f))
+            else Spacer(Modifier.weight(1f))
+            if (myCount != null) CountChip(myCount)
+            ThemeToggleButton()
+            // profile button + red badge
+            Box {
+                HeaderBtn("", "user", onClick = onProfile)
+                if (badge > 0) {
+                    Box(
+                        Modifier.align(Alignment.TopEnd).clip(CircleShape).background(errColor())
+                            .padding(horizontal = 5.dp)
+                    ) { Text(if (badge > 99) "৯৯+" else Fmt.bn(badge), color = Color.White, fontSize = 10.5.sp, fontWeight = FontWeight.Bold) }
+                }
+            }
+            if (isAdmin) {
+                HeaderBtn(if (maxWidth > 430.dp) "অ্যাডমিন" else "", "shield", onClick = onAdmin)
+                HeaderBtn(if (maxWidth > 430.dp) "লগআউট" else "", "logout", onClick = onLogout)
             }
         }
-        if (isAdmin) {
-            HeaderBtn("অ্যাডমিন", "shield", onClick = onAdmin)
-            HeaderBtn("লগআউট", "logout", onClick = onLogout)
-        }
+    }
+}
+
+/** The page title in the header, on a glass pill so it stays readable over the animated background. */
+@Composable
+internal fun HeaderTitle(text: String, modifier: Modifier = Modifier) {
+    Box(modifier, contentAlignment = Alignment.CenterStart) {
+        Text(
+            text, color = MaterialTheme.colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.glass(RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 5.dp)
+        )
     }
 }
 
@@ -92,7 +109,7 @@ internal fun CountChip(n: Int) {
     val cs = MaterialTheme.colorScheme
     val gold = goldColor()
     Row(
-        Modifier.clip(CircleShape).background(gold.copy(alpha = 0.16f)).border(1.dp, gold.copy(alpha = 0.55f), CircleShape)
+        Modifier.clip(CircleShape).background(cs.background.copy(alpha = 0.88f)).background(gold.copy(alpha = 0.16f)).border(1.dp, gold.copy(alpha = 0.55f), CircleShape)
             .padding(start = 8.dp, end = 10.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -109,15 +126,16 @@ internal fun HeaderBtn(text: String, icon: String, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     Row(
         Modifier.clip(shape)
+            .background(cs.surface.copy(alpha = 0.72f))
             .background(cs.surfaceVariant.copy(alpha = 0.55f))
             .border(1.dp, cs.outline.copy(alpha = 0.6f), shape)
-            .clickable(onClick = onClick)
+            .hapticClickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         AppIcon(icon, size = 16.dp, tint = cs.onSurface)
-        if (text.isNotEmpty()) Text(text, color = cs.onSurface, fontSize = 13.sp)
+        if (text.isNotEmpty()) Text(text, color = cs.onSurface, fontSize = 13.sp, maxLines = 1, softWrap = false)
     }
 }
 
@@ -141,7 +159,7 @@ fun TaskBottomNav(tab: String, onPick: (String) -> Unit) {
                 Column(
                     Modifier.weight(1f).clip(RoundedCornerShape(12.dp))
                         .background(if (on) cs.primary.copy(alpha = 0.12f) else Color.Transparent)
-                        .clickable { onPick(k) }
+                        .hapticClickable { onPick(k) }
                         .padding(vertical = 7.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(2.dp)

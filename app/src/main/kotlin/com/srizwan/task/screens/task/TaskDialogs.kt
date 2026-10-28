@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.srizwan.task.core.Fmt
 import com.srizwan.task.ui.errColor
+import com.srizwan.task.ui.hapticClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Alignment
@@ -77,7 +78,7 @@ fun GoalDialog(
                             Fmt.bn(g), color = cs.onSurface, fontSize = 12.5.sp,
                             modifier = Modifier.clip(CircleShape)
                                 .border(1.dp, cs.outline.copy(alpha = 0.6f), CircleShape)
-                                .clickable { onValue(g.toString()) }
+                                .hapticClickable { onValue(g.toString()) }
                                 .padding(horizontal = 14.dp, vertical = 6.dp)
                         )
                     }

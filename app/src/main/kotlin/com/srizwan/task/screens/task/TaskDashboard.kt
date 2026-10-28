@@ -34,6 +34,7 @@ import com.srizwan.task.core.str
 import com.srizwan.task.ui.AppCard
 import com.srizwan.task.ui.AppIcon
 import com.srizwan.task.ui.goldColor
+import com.srizwan.task.ui.hapticClickable
 import com.srizwan.task.ui.okColor
 import org.json.JSONObject
 
@@ -95,7 +96,7 @@ private fun GoalBox(today: Int, goal: Int, pct: Float, hit: Boolean, left: Int, 
         modifier.clip(shape)
             .background(cs.surfaceVariant.copy(alpha = 0.35f))
             .border(1.dp, if (hit) ok else cs.outline.copy(alpha = 0.6f), shape)
-            .clickable(onClick = onGoal)
+            .hapticClickable(onClick = onGoal)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -199,7 +200,7 @@ private fun ResumeButton(rt: ResumeTarget, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(top = 12.dp).clip(shape)
             .background(Brush.linearGradient(listOf(cs.primary, cs.secondary)))
-            .clickable(onClick = onClick)
+            .hapticClickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center

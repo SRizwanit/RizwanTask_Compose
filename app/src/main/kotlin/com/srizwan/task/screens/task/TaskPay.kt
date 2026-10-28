@@ -1,5 +1,8 @@
 package com.srizwan.task.screens.task
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +50,8 @@ import com.srizwan.task.screens.admin.Tile
 import com.srizwan.task.ui.AppCard
 import com.srizwan.task.ui.PrimaryButton
 import com.srizwan.task.ui.errColor
+import com.srizwan.task.ui.goldColor
+import com.srizwan.task.ui.hapticClickable
 import com.srizwan.task.ui.okColor
 import org.json.JSONObject
 
@@ -102,7 +109,7 @@ fun PayPane(data: TaskData, reqBusy: Boolean, onRequest: () -> Unit, onOpenPage:
             // #payTiles
             if (s == null) PayTilesSkeleton() else PayTiles(s)
             // #fcBox
-            if (s != null) Forecast(s, min, dr = data.rateOf(null))
+            if (s != null) Forecast(s, min, dr = data.rateOf(null)) else SkeletonPanel(listOf(0.5f, 0.92f, 0.7f))
 
             // পেমেন্ট রিকোয়েস্ট
             AppCard(modifier = Modifier.padding(bottom = 14.dp), padding = 14.dp) {
@@ -111,6 +118,9 @@ fun PayPane(data: TaskData, reqBusy: Boolean, onRequest: () -> Unit, onOpenPage:
                         Text("পেমেন্ট রিকোয়েস্ট", color = cs.onSurface, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
                         if (s != null) Badge("ডিফল্ট রেট ${rateTxt(data.rateOf(null))} / পেইজ", "gold")
                     }
+                    // how much of the minimum payout is reached
+                    if (s != null) MinPayoutProgress(s.available, min, Modifier.padding(top = 10.dp))
+                    else SkeletonLine(1f, Modifier.padding(top = 10.dp), height = 8.dp)
                     Text(
                         hint, color = cs.onSurfaceVariant, fontSize = 12.sp, lineHeight = 18.sp,
                         modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
@@ -127,8 +137,9 @@ fun PayPane(data: TaskData, reqBusy: Boolean, onRequest: () -> Unit, onOpenPage:
                 Column(Modifier.padding(horizontal = 2.dp)) {
                     Text("পেমেন্ট ইতিহাস", color = cs.onSurface, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Column(Modifier.padding(top = 10.dp)) {
-                        if (s != null) {
-                            if (pays.isEmpty()) Empty("এখনো কোনো পেমেন্ট ইতিহাস নেই", pad = true)
+                        if (s == null) SkeletonStack(listOf(0.55f, 0.9f, 0.7f))
+                        else {
+                            if (pays.isEmpty()) Empty("এখনো কোনো পেমেন্ট ইতিহাস নেই", pad = true, art = "wallet")
                             else pays.forEach { PayRow(it) }
                         }
                     }
@@ -148,8 +159,9 @@ fun PayPane(data: TaskData, reqBusy: Boolean, onRequest: () -> Unit, onOpenPage:
                         color = cs.onSurfaceVariant, fontSize = 12.sp, lineHeight = 18.sp,
                         modifier = Modifier.padding(top = 4.dp, bottom = 10.dp)
                     )
-                    if (s != null) {
-                        if (s.byBook.isEmpty()) Empty("এখনো কোনো পেইজ প্রুফড করেননি", pad = true)
+                    if (s == null) SkeletonStack(listOf(0.6f, 0.95f, 0.45f))
+                    else {
+                        if (s.byBook.isEmpty()) Empty("এখনো কোনো পেইজ প্রুফড করেননি", pad = true, art = "books")
                         else s.byBook.forEach { (id, x) ->
                             val b = booksById[id]
                             Column(Modifier.fillMaxWidth().kvLine().padding(vertical = 12.dp)) {
@@ -194,7 +206,7 @@ fun PayPane(data: TaskData, reqBusy: Boolean, onRequest: () -> Unit, onOpenPage:
                                     (b?.str("name") ?: "কিতাব") + " — " + stem,
                                     color = cs.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f)
                                 )
-                                Box(Modifier.clip(CircleShape).clickable { onOpenPage(bid, stem) }) { Badge("খুলুন", "bad") }
+                                Box(Modifier.clip(CircleShape).hapticClickable { onOpenPage(bid, stem) }) { Badge("খুলুন", "bad") }
                             }
                             val note = p.str("review_note")
                             if (!note.isNullOrEmpty()) Text("অ্যাডমিন: $note", color = cs.onSurfaceVariant, fontSize = 12.5.sp, lineHeight = 20.sp)
@@ -254,6 +266,41 @@ private fun PayTiles(s: Summary) {
                 }
             }
         }
+    }
+}
+
+/**
+ * Progress towards the minimum payout: [available] / [min] as a whole percent (rounded down, so 100% only shows when the
+ * minimum is really reached), an animated bar and a short line under it.
+ */
+@Composable
+private fun MinPayoutProgress(available: Double, min: Double, modifier: Modifier = Modifier) {
+    val cs = MaterialTheme.colorScheme
+    val ok = okColor()
+    val gold = goldColor()
+    val avail = if (available.isFinite()) maxOf(0.0, available) else 0.0
+    val reached = min <= 0.0 || avail >= min
+    val ratio = if (reached) 1.0 else (avail / min).coerceIn(0.0, 1.0)
+    val pct = if (reached) 100 else Math.floor(ratio * 100.0).toInt().coerceAtMost(99)
+    val bar by animateFloatAsState(ratio.toFloat(), tween(700, easing = FastOutSlowInEasing), label = "minPayoutBar")
+    Column(modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("ন্যূনতম পেমেন্টের অগ্রগতি", color = cs.onSurfaceVariant, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            Text(Fmt.bn(pct) + "%", color = if (reached) ok else gold, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        }
+        Box(Modifier.padding(top = 6.dp).fillMaxWidth().height(10.dp).clip(RoundedCornerShape(99.dp)).background(cs.surfaceVariant)) {
+            if (bar > 0f) {
+                Box(
+                    Modifier.fillMaxWidth(bar).height(10.dp).background(
+                        Brush.horizontalGradient(if (reached) listOf(ok, ok.copy(alpha = 0.75f)) else listOf(cs.primary, cs.secondary))
+                    )
+                )
+            }
+        }
+        Text(
+            if (reached) "ন্যূনতম ${Fmt.money(min)} পূর্ণ হয়েছে" else "${Fmt.money(avail)} / ${Fmt.money(min)} • আরও ${Fmt.money(min - avail)} দরকার",
+            color = cs.onSurfaceVariant, fontSize = 11.5.sp, modifier = Modifier.padding(top = 5.dp)
+        )
     }
 }
 
@@ -338,8 +385,8 @@ fun Forecast(s: Summary, min: Double, dr: Double) {
                 FcRow("রিভিউ বাকি ${Fmt.bn(s.pending)} পেইজ সব অনুমোদিত হলে যোগ হবে", "≈ +" + Fmt.money(s.pendingAmt), up = true, dashed = true)
                 FcRow("তখন মোট পয়েন্টস হবে", "≈ " + Fmt.money(allEarn), dashed = true)
                 FcRow("তখন উত্তোলনযোগ্য হবে", "≈ " + Fmt.money(allAvail), dashed = showApr)
-                if (showApr) FcRow(
-                    "আপনার অনুমোদনের হার ${Fmt.bn(Math.round(apr!! * 100))}% — সেই হিসাবে যোগ হবে",
+                if (showApr && apr != null) FcRow(
+                    "আপনার অনুমোদনের হার ${Fmt.bn(Math.round(apr * 100))}% — সেই হিসাবে যোগ হবে",
                     "≈ +" + Fmt.money(s.pendingAmt * apr), dashed = false
                 )
                 Text(

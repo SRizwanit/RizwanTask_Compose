@@ -43,14 +43,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.srizwan.task.core.Fmt
 import com.srizwan.task.core.finiteNum
 import com.srizwan.task.core.str
 import com.srizwan.task.core.BookSum
 import com.srizwan.task.ui.AppField
 import com.srizwan.task.ui.AppIcon
+import com.srizwan.task.ui.CoverImage
+import com.srizwan.task.ui.glass
+import com.srizwan.task.ui.EmptyArt
 import com.srizwan.task.ui.Spinner
+import com.srizwan.task.ui.hapticClickable
 import com.srizwan.task.ui.goldColor
 import com.srizwan.task.ui.okColor
 import org.json.JSONObject
@@ -67,7 +70,8 @@ fun TaskSearchRow(query: String, onQuery: (String) -> Unit, onReload: () -> Unit
     val cs = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(8.dp)
     Row(
-        Modifier.fillMaxWidth().padding(bottom = 14.dp),
+        // glass behind the search field + refresh button, so they stay readable over the background
+        Modifier.fillMaxWidth().padding(bottom = 14.dp).glass(RoundedCornerShape(14.dp)).padding(6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -79,7 +83,7 @@ fun TaskSearchRow(query: String, onQuery: (String) -> Unit, onReload: () -> Unit
             Modifier.clip(shape)
                 .background(cs.surfaceVariant.copy(alpha = 0.55f))
                 .border(1.dp, cs.outline.copy(alpha = 0.6f), shape)
-                .clickable(onClick = onReload)
+                .hapticClickable(onClick = onReload)
                 .padding(horizontal = 10.dp, vertical = 10.dp),
             contentAlignment = Alignment.Center
         ) { AppIcon("refresh", size = 18.dp, tint = cs.onSurface) }
@@ -138,8 +142,8 @@ fun BookGrid(
     }
     if (showEmpty) {
         EmptyGlassNote(
-            icon = if (failed) "refresh" else "search",
-            text = if (failed) "কিতাব লোড হয়নি — নেট দেখে রিফ্রেশ চাপুন" else "কোনো কিতাব পাওয়া যায়নি"
+            art = if (failed) "cloud" else "search",
+            text = if (failed) "কিতাব লোড হয়নি — নেট দেখে রিফ্রেশ চাপুন বা নিচে টেনে রিফ্রেশ করুন" else "কোনো কিতাব পাওয়া যায়নি"
         )
     }
 }
@@ -149,11 +153,11 @@ fun BookGrid(
  * animated flower background: translucent fill, a light top-to-bottom sheen, a soft glass edge and a vector icon.
  */
 @Composable
-private fun EmptyGlassNote(icon: String, text: String) {
+private fun EmptyGlassNote(art: String, text: String) {
     val cs = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(16.dp)
     Box(Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = Alignment.Center) {
-        Row(
+        Column(
             Modifier.clip(shape)
                 .background(cs.surface.copy(alpha = 0.62f))
                 .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.14f), Color.White.copy(alpha = 0.03f))))
@@ -163,10 +167,10 @@ private fun EmptyGlassNote(icon: String, text: String) {
                     shape
                 )
                 .padding(horizontal = 18.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            AppIcon(icon, size = 18.dp, tint = cs.onSurface)
+            EmptyArt(art, size = 80.dp)
             Text(text, color = cs.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
         }
     }
@@ -181,7 +185,7 @@ private fun BookCard(b: JSONObject, done: Int, total: Int, mine: Int, last: Bool
         modifier.clip(shape)
             .background(cs.surface.copy(alpha = 0.94f))
             .border(1.dp, cs.outline.copy(alpha = 0.6f), shape)
-            .clickable(onClick = onClick)
+            .hapticClickable(onClick = onClick)
     ) {
         // .cv
         Box(
@@ -218,10 +222,7 @@ private fun Cover(url: String?) {
     if (url.isNullOrEmpty() || bad) {
         AppIcon("book", size = 40.dp, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     } else {
-        AsyncImage(
-            model = url, contentDescription = null, contentScale = ContentScale.Crop,
-            onError = { bad = true }, modifier = Modifier.fillMaxSize()
-        )
+        CoverImage(url, Modifier.fillMaxSize(), onError = { bad = true })
     }
 }
 

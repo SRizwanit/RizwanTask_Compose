@@ -10,6 +10,11 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +45,7 @@ import com.srizwan.task.core.Sb
 import com.srizwan.task.core.enc
 import com.srizwan.task.core.str
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.coroutineScope
 import org.json.JSONObject
 import com.srizwan.task.nav.Nav
 import kotlinx.coroutines.delay
@@ -61,6 +67,7 @@ import kotlinx.coroutines.launch
  * It already runs the React guard (requireAuth: session, device, blocked) so login / signup / logout can be tested.
  * The temporary logout button is gone (3-চ-১): users log out from the Profile page, the admin also from the header.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskScreen() {
     val data = remember { TaskData() }
@@ -70,6 +77,7 @@ fun TaskScreen() {
     // React `tab`: task | pay | rank.
     var tab by remember { mutableStateOf("task") }
     val scroll = rememberScrollState()
+    val pullState = rememberPullToRefreshState()
     val isAdmin = me?.let { Phone.isAdminPhone(it.phone) } == true
     // badge = unseen notices (3-খ-৩; the profile list in 3-ছ-১)
     val badge = data.badge
@@ -235,6 +243,30 @@ fun TaskScreen() {
         scope.launch { scroll.scrollTo(0) }
     }
 
+    // Pull-to-refresh, the same on every tab: pull down at the top of the page. Each tab reloads its own data
+    // (task: books + counts + notices, pay: money data + count, rank: the leaderboard without its 60 s cache).
+    var pulling by remember { mutableStateOf(false) }
+    fun pullRefresh() {
+        if (pulling || data.me == null) return
+        pulling = true
+        val t = tab
+        val t0 = System.currentTimeMillis()
+        scope.launch {
+            try {
+                coroutineScope {
+                    when (t) {
+                        "pay" -> { launch { data.loadCount() }; launch { data.loadMoney() } }
+                        "rank" -> launch { rank.load(rank.period, force = true) }
+                        else -> { launch { data.load() }; launch { data.loadCount() }; launch { data.loadNotices() } }
+                    }
+                }
+                // a loader that returns at once (already running) must not make the indicator flash
+                val left = 600L - (System.currentTimeMillis() - t0)
+                if (left > 0) delay(left)
+            } finally { pulling = false }
+        }
+    }
+
     /** React `logout`: log the action, then sign out after a short delay. */
     fun logout() {
         scope.launch { ActivityLog.log("logout", ""); delay(150); Auth.logout() }
@@ -302,7 +334,21 @@ fun TaskScreen() {
                 tab, data.myCount, badge, isAdmin,
                 onProfile = { Nav.go("profile") }, onAdmin = { Nav.go("admin") }, onLogout = { logout() }
             )
-            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.TopCenter) {
+            PullToRefreshBox(
+                isRefreshing = pulling,
+                onRefresh = { pullRefresh() },
+                state = pullState,
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentAlignment = Alignment.TopCenter,
+                indicator = {
+                    PullToRefreshDefaults.Indicator(
+                        state = pullState, isRefreshing = pulling,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            ) {
                 Column(
                     Modifier.widthIn(max = 980.dp).fillMaxSize()
                         .verticalScroll(scroll)
@@ -315,12 +361,14 @@ fun TaskScreen() {
                         )
                         "rank" -> RankPane(
                             rank, meId = me?.id ?: "",
-                            onPeriod = { k -> rank.pick(k); scope.launch { rank.load(k) } }
+                            onPeriod = { k -> rank.pick(k); scope.launch { rank.load(k) } },
+                            pulling = pulling
                         )
                         else -> TaskPane(
                             data, resume, query, onQuery = { query = it },
                             onReload = { scope.launch { data.load() }; scope.launch { data.loadCount() }; scope.launch { data.loadNotices() } },
-                            onGoal = { openGoal() }, onResume = { openResume() }, onOpen = { openBook(it) }
+                            onGoal = { openGoal() }, onResume = { openResume() }, onOpen = { openBook(it) },
+                            pulling = pulling
                         )
                     }
                 }
@@ -358,7 +406,7 @@ fun TaskScreen() {
 @Composable
 private fun TaskPane(
     data: TaskData, resume: ResumeRec?, query: String, onQuery: (String) -> Unit, onReload: () -> Unit,
-    onGoal: () -> Unit, onResume: () -> Unit, onOpen: (String) -> Unit
+    onGoal: () -> Unit, onResume: () -> Unit, onOpen: (String) -> Unit, pulling: Boolean = false
 ) {
     TaskDashboard(
         ready = data.fin.ready, proofs = data.fin.proofs, booksById = data.booksById,
@@ -367,7 +415,7 @@ private fun TaskPane(
     TaskSearchRow(query, onQuery, onReload)
     // `#noticeBar` is an empty div in React; notices open as a dialog (3-খ-৩)
     BookGrid(
-        status = data.booksStatus, spinning = data.spinning, books = data.shownBooks, query = query,
+        status = data.booksStatus, spinning = data.spinning && !pulling, books = data.shownBooks, query = query,
         bookCounts = data.bookCounts, byBook = data.sum?.byBook ?: emptyMap(), resume = resume,
         rateOf = { data.rateOf(it) }, onOpen = onOpen
     )
