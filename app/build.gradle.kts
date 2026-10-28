@@ -80,7 +80,7 @@ kotlin {
 androidComponents {
     onVariants { variant ->
         buildConfigKeys.forEach { key ->
-            variant.buildConfigFields.put(
+            variant.buildConfigFields?.put(
                 key,
                 cfg(key).map { value -> BuildConfigField("String", "\"$value\"", null) }
             )
