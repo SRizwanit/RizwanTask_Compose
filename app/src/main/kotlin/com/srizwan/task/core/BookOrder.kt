@@ -21,7 +21,7 @@ object BookOrder {
         val byTime = if (ta != null && tb != null) tb.compareTo(ta) else cb.compareTo(ca)
         if (byTime != 0) byTime else {
             val byName = collator.compare(a.str("name").orEmpty(), b.str("name").orEmpty())
-            if (byName != 0) byName else a.opt("id").toString().compareTo(b.opt("id").toString())
+            if (byName != 0) byName else (a.opt("id")?.toString() ?: "").compareTo(b.opt("id")?.toString() ?: "")
         }
     }
 

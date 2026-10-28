@@ -21,7 +21,7 @@ fun JSONArray.objects(): List<JSONObject> = List(length()) { getJSONObject(it) }
 /** String value, or null when the key is missing / JSON null. */
 fun JSONObject.str(key: String): String? {
     if (!has(key) || isNull(key)) return null
-    return opt(key).toString()
+    return opt(key)?.toString()
 }
 
 /** Finite number from a number or numeric string; null otherwise (JS Number.isFinite(Number(x)) with '' excluded). */
