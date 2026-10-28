@@ -49,10 +49,19 @@ import com.srizwan.task.core.AppUser
 import com.srizwan.task.core.Net
 import com.srizwan.task.core.openWhatsApp
 
+/**
+ * Lets a screen that shows its own "check your internet" dialog hide the [NetBar] meanwhile (the Task page, step ঘ-২-খ).
+ * The screen sets [hidden] while its dialog is open and clears it when the dialog closes or the screen leaves.
+ */
+object NetBarGate {
+    val hidden = kotlinx.coroutines.flow.MutableStateFlow(false)
+}
+
 /** `#netBar` — no internet / slow net / back online message under the header. */
 @Composable
 fun NetBar() {
     val bar by Net.bar.collectAsState()
+    val gateHidden by NetBarGate.hidden.collectAsState()
     var last by remember { mutableStateOf<Net.Bar?>(null) }
     if (bar != null) last = bar
 
@@ -60,7 +69,7 @@ fun NetBar() {
         Modifier.fillMaxSize().statusBarsPadding().padding(top = 66.dp, start = 16.dp, end = 16.dp),
         contentAlignment = Alignment.TopCenter
     ) {
-        AnimatedVisibility(visible = bar != null, enter = fadeIn(), exit = fadeOut()) {
+        AnimatedVisibility(visible = bar != null && !gateHidden, enter = fadeIn(), exit = fadeOut()) {
             last?.let { b ->
                 val bg = when (b.mode) {
                     Net.Mode.OFF -> Color(0xFFB91C1C)
