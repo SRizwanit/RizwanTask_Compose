@@ -196,7 +196,10 @@ fun RankPane(rank: RankState, meId: String, onPeriod: (String) -> Unit, pulling:
                     PodiumCard(d.rows.take(3), meId, d.names, bc)
                     d.rows.take(20).forEachIndexed { i, r -> if (i >= 3) RankItem(r, i, meId, d.names, bc[r.id] ?: 0) }
                     if (idx >= 20) {
-                        Text("⋮", color = cs.onSurfaceVariant, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
+                        // gap marker: three vector dots (no text glyph)
+                        Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            repeat(3) { Box(Modifier.size(3.dp).background(cs.onSurfaceVariant, CircleShape)) }
+                        }
                         RankItem(d.rows[idx], idx, meId, d.names, bc[d.rows[idx].id] ?: 0)
                     }
                 }

@@ -4,6 +4,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.srizwan.task.core.AppScope
 import com.srizwan.task.core.AppToast
 import com.srizwan.task.core.AppUser
 import com.srizwan.task.core.Earnings
@@ -15,6 +16,9 @@ import com.srizwan.task.core.finiteNum
 import com.srizwan.task.core.objects
 import com.srizwan.task.core.str
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -58,6 +62,55 @@ class TaskData {
 
     /** Called with the fresh proofs after every money load — TaskScreen sets it to `goalToast(proofs, goal, me.id)` (3-খ-১). */
     var onMoneyLoaded: ((List<JSONObject>) -> Unit)? = null
+
+    /**
+     * Offline cache (ক-২): the snapshot is written only from data that really came from the network in this session
+     * (never from the cache itself, never half loaded): books + progress counts + money must all be fresh. Several loaders
+     * finish within a second of each other, so the write is delayed 1.5 s and restarted by each one — one write in the end.
+     */
+    private var freshBooks = false
+    private var freshCounts = false
+    private var freshMoney = false
+    private var cacheJob: Job? = null
+
+    private fun scheduleCacheSave() {
+        if (!(freshBooks && freshCounts && freshMoney)) return
+        cacheJob?.cancel()
+        cacheJob = AppScope.scope.launch {
+            delay(1500)
+            val u = me ?: return@launch
+            TaskCache.save(u.id, shownBooks, bookCounts, myCount, fin, allNotices)
+        }
+    }
+
+    /**
+     * Offline cache (খ-১): true while the books / counts / money on screen come from the saved snapshot and no real
+     * network load has replaced them yet. খ-৩ turns it off after a successful `load()`; খ-৫ blocks payment requests
+     * while it is true.
+     */
+    var usingCache by mutableStateOf(false); private set
+
+    /** True while the money data ([fin]) is still the saved snapshot: no real [loadMoney] has succeeded yet (খ-৫). */
+    val moneyStale: Boolean get() = usingCache && !freshMoney
+
+    /**
+     * Show the saved snapshot [s] (books, progress counts, myCount, money) so the page is never empty offline.
+     * Only when nothing real is loaded yet. It never marks anything "fresh" (so it is never written back), never calls
+     * [onMoneyLoaded] (no goal toast from old proofs) and never schedules a cache save. Saved notices only set the badge (খ-৪).
+     * Nobody calls this yet — খ-২ wires it into TaskScreen.
+     */
+    fun applyCache(s: TaskCache.Snap) {
+        if (books.isNotEmpty() || freshBooks || !s.fin.ready || s.books.isEmpty()) return
+        books = s.books
+        bookCounts = s.bookCounts
+        myCount = s.myCount
+        fin = s.fin
+        booksStatus = "ready"
+        usingCache = true
+        // Saved notices: only the badge is recounted (same rule as loadNotices); the dialog is never opened from here.
+        // A later loadNotices() replaces these; if it fails (offline) they stay.
+        me?.let { u -> allNotices = s.notices; badge = freshNotices(u, s.notices).size }
+    }
 
     /** React `booksById`: every book, hidden ones too (used for calculations). */
     val booksById: Map<String, JSONObject> by derivedStateOf { books.associateBy { it.opt("id")?.toString() ?: "" } }
@@ -115,6 +168,7 @@ class TaskData {
                 }
             }
             myCount = n
+            scheduleCacheSave()
         } catch (e: CancellationException) { throw e } catch (e: Exception) { /* no table / network: keep the old number */ }
         finally { busyCnt = false }
     }
@@ -136,7 +190,9 @@ class TaskData {
             val pays = try { Sb.getAll("payments?user_id=eq.${enc(u.id)}&order=created_at.desc") }
                 catch (e: CancellationException) { throw e } catch (e: Exception) { emptyList() }
             fin = Fin(S, proofs, pays, true)
+            freshMoney = true
             onMoneyLoaded?.invoke(proofs)
+            scheduleCacheSave()
         } catch (e: CancellationException) { throw e } catch (e: Exception) { /* network / table problem: keep the old data */ }
         finally { busyMoney = false }
         return fin
@@ -157,6 +213,8 @@ class TaskData {
                 }
             }
             bookCounts = m
+            freshCounts = true
+            scheduleCacheSave()
         } catch (e: CancellationException) { throw e } catch (e: Exception) { /* no table: the bars are simply absent */ }
     }
 
@@ -166,15 +224,29 @@ class TaskData {
         try {
             books = Sb.get("books?select=*&order=created_at.desc").objects()
             booksStatus = "ready"
+            freshBooks = true
         } catch (e: CancellationException) { throw e } catch (e: Exception) {
             AppToast.show("কিতাব লোড হয়নি: ${e.message}", true)
             if (books.isEmpty()) booksStatus = "error"
         } finally { spinning = false }
         loadCounts(); loadMoney()
+        // The saved snapshot is replaced only when both the books and the money data are real now; a failed money load
+        // keeps usingCache true so payment requests stay blocked (খ-৫). A failed load() keeps the cached books, no error.
+        if (freshBooks && freshMoney) usingCache = false
     }
 
     /** React `openNotices`: show these notices, starting at the first (the Task page passes oldest first, the Profile button newest first). */
     fun showNotices(list: List<JSONObject>) { nList = list; nIdx = 0; if (!nOpen) nOpen = true }
+
+    /** Notices (newest first) I have not seen and that are not older than my sign-up minus a day; returned oldest first. */
+    private fun freshNotices(u: AppUser, list: List<JSONObject>): List<JSONObject> {
+        val seen = readSeen(u.id)
+        val joined = Fmt.parseInstant(u.raw.str("created_at"))?.toEpochMilli()?.minus(86400000L) ?: 0L
+        return list.filter { n ->
+            val t = Fmt.parseInstant(n.str("created_at"))?.toEpochMilli()
+            (n.opt("id")?.toString() ?: "") !in seen && t != null && t >= joined
+        }.reversed()
+    }
 
     /**
      * React `loadNotices`: notices for everyone (`user_id` null) or for me, newest 40. The ones I have not seen and that
@@ -188,12 +260,8 @@ class TaskData {
         try {
             val list = Sb.get("notices?or=" + enc("(user_id.is.null,user_id.eq.${u.id})") + "&order=created_at.desc&limit=40").objects()
             allNotices = list
-            val seen = readSeen(u.id)
-            val joined = Fmt.parseInstant(u.raw.str("created_at"))?.toEpochMilli()?.minus(86400000L) ?: 0L
-            val fresh = list.filter { n ->
-                val t = Fmt.parseInstant(n.str("created_at"))?.toEpochMilli()
-                (n.opt("id")?.toString() ?: "") !in seen && t != null && t >= joined
-            }.reversed()
+            scheduleCacheSave()
+            val fresh = freshNotices(u, list)
             badge = fresh.size
             if (autoOpen && fresh.isNotEmpty() && !nOpen && !guideOpen()) showNotices(fresh)
             return list
@@ -213,8 +281,13 @@ class TaskData {
     }
 
     /** React `refreshAll`. */
-    suspend fun refreshAll() { loadCount(); loadCounts(); loadMoney(); loadNotices() }
+    suspend fun refreshAll() {
+        // ঙ-১: while only the saved snapshot is shown, coming back to the app must load the book list too (load() also does
+        // counts + money); otherwise the dialog could close (a later request succeeded) while old cached books stay on screen.
+        if (usingCache) { load(); loadCount(); loadNotices() }
+        else { loadCount(); loadCounts(); loadMoney(); loadNotices() }
+    }
 
-    /** React `retryAll`: no books yet -> full load, else refresh. */
-    suspend fun retryAll() { if (books.isEmpty()) load() else refreshAll() }
+    /** React `retryAll`: no books yet, or only the saved snapshot shown -> full load (refreshAll never reloads the book list), else refresh. */
+    suspend fun retryAll() { if (books.isEmpty() || usingCache) load() else refreshAll() }
 }

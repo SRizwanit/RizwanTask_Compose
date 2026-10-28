@@ -1,5 +1,6 @@
 package com.srizwan.task.screens.task
 
+import android.graphics.BitmapFactory
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -8,6 +9,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -49,6 +52,7 @@ import com.srizwan.task.core.str
 import com.srizwan.task.core.BookSum
 import com.srizwan.task.ui.AppField
 import com.srizwan.task.ui.AppIcon
+import com.srizwan.task.core.Net
 import com.srizwan.task.ui.CoverImage
 import com.srizwan.task.ui.glass
 import com.srizwan.task.ui.EmptyArt
@@ -192,7 +196,7 @@ private fun BookCard(b: JSONObject, done: Int, total: Int, mine: Int, last: Bool
             Modifier.fillMaxWidth().aspectRatio(3f / 4f).background(cs.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            Cover(b.str("cover_url"))
+            Cover(b.str("cover_url"), b.opt("id")?.toString().orEmpty())
             if (last) {
                 Text(
                     "শেষ কাজ", color = Color(0xFF4A3200), fontSize = 11.sp, fontWeight = FontWeight.Bold,
@@ -215,14 +219,24 @@ private fun BookCard(b: JSONObject, done: Int, total: Int, mine: Int, last: Bool
     }
 }
 
-/** React `Cover`: the cover image, or a book icon when there is no URL / it fails to load. */
+/**
+ * React `Cover`: the cover image, or a book icon when there is no URL / it fails to load.
+ * Offline (ক-২): when there is no internet, or the download failed, the cover saved by [TaskCache] (only the 2 cached books
+ * have one) is drawn from the disk instead of the icon.
+ */
 @Composable
-private fun Cover(url: String?) {
+private fun Cover(url: String?, id: String) {
     var bad by remember(url) { mutableStateOf(false) }
-    if (url.isNullOrEmpty() || bad) {
-        AppIcon("book", size = 40.dp, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-    } else {
-        CoverImage(url, Modifier.fillMaxSize(), onError = { bad = true })
+    val saved = remember(id, bad) {
+        if (id.isEmpty() || (!bad && Net.isOnline)) null
+        else TaskCache.coverBytes(id)?.let { bytes ->
+            try { BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() } catch (_: Exception) { null }
+        }
+    }
+    when {
+        saved != null -> Image(bitmap = saved, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        url.isNullOrEmpty() || bad -> AppIcon("book", size = 40.dp, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        else -> CoverImage(url, Modifier.fillMaxSize(), onError = { bad = true })
     }
 }
 

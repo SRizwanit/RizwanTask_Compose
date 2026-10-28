@@ -18,6 +18,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,12 +45,16 @@ import com.srizwan.task.core.Prefs
 import com.srizwan.task.core.Sb
 import com.srizwan.task.core.enc
 import com.srizwan.task.core.str
+import com.srizwan.task.ui.NetBarGate
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import org.json.JSONObject
 import com.srizwan.task.nav.Nav
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * React Task.jsx — 2-ট: the EMPTY structure of the Task page. No data, no logic yet.
@@ -73,6 +78,15 @@ fun TaskScreen() {
     val data = remember { TaskData() }
     val me = data.me
     val scope = rememberCoroutineScope()
+    // "check your internet" dialog (ঘ-২-ক): a real connection problem AND nothing fresh to show (cached data or no book list)
+    val netProblem by Net.problem.collectAsState()
+    var netBusy by remember { mutableStateOf(false) }
+    val netDialog = me != null && netProblem && (data.usingCache || data.booksStatus == "error")
+    // while the dialog is open the red NetBar is hidden (ঘ-২-খ); it comes back when the dialog closes or the page is left
+    DisposableEffect(netDialog) {
+        NetBarGate.hidden.value = netDialog
+        onDispose { NetBarGate.hidden.value = false }
+    }
 
     // React `tab`: task | pay | rank.
     var tab by remember { mutableStateOf("task") }
@@ -182,7 +196,7 @@ fun TaskScreen() {
                 val s = summaryOf(f)
                 val min = minPayout(f.S)
                 val u = data.me ?: return@launch
-                if (s == null) { AppToast.show("তথ্য আনা যায়নি, আবার চেষ্টা করুন", true); return@launch }
+                if (s == null || data.moneyStale) { AppToast.show("তথ্য আনা যায়নি, আবার চেষ্টা করুন", true); return@launch }
                 if (u.paymentNumber.isNullOrEmpty()) { AppToast.show("আগে পেমেন্ট নাম্বার দিন", true); return@launch }
                 if (s.available < min || s.available <= 0) { AppToast.show("ন্যূনতম ${Fmt.money(min)} হলে রিকোয়েস্ট করা যাবে", true); return@launch }
                 rq = RequestInfo(
@@ -208,7 +222,7 @@ fun TaskScreen() {
                 val min = minPayout(f.S)
                 val amt = Fmt.r2(rqAmt.toDoubleOrNull())
                 val u = data.me ?: return@launch
-                if (s == null) throw IllegalStateException("তথ্য আনা যায়নি, আবার চেষ্টা করুন")
+                if (s == null || data.moneyStale) throw IllegalStateException("তথ্য আনা যায়নি, আবার চেষ্টা করুন")
                 if (!amt.isFinite() || amt <= 0) throw IllegalStateException("সঠিক পরিমাণ দিন")
                 if (amt < min) throw IllegalStateException("ন্যূনতম ${Fmt.money(min)} চাইতে হবে")
                 if (amt > s.available) throw IllegalStateException("উত্তোলনযোগ্য ${Fmt.money(s.available)}-এর বেশি চাওয়া যাবে না")
@@ -280,6 +294,9 @@ fun TaskScreen() {
         data.goal = readGoal(u.id)
         data.onMoneyLoaded = { proofs -> goalToast(proofs, data.goal, u.id) }
         data.me = u
+        // Offline cache: show the saved snapshot at once (read off the main thread), before the network load starts.
+        // The network load below still runs alongside; applyCache does nothing if real data is already there.
+        withContext(Dispatchers.IO) { TaskCache.read(u.id) }?.let { snap -> data.applyCache(snap) }
         reloadResume()
         hash = Nav.consumeHash()
         scope.launch { data.loadCount() }
@@ -392,6 +409,15 @@ fun TaskScreen() {
             )
         }
         if (exitOpen) ExitDialog(onDismiss = { exitOpen = false })
+        if (netDialog) NetErrorDialog(busy = netBusy, onRefresh = {
+            if (!netBusy) scope.launch {
+                netBusy = true
+                try {
+                    // same three loads as the pull-to-refresh; a failure keeps the dialog (the condition above stays true)
+                    listOf(launch { data.load() }, launch { data.loadCount() }, launch { data.loadNotices() }).joinAll()
+                } finally { netBusy = false }
+            }
+        })
         if (goalOpen) GoalDialog(
             value = glVal, onValue = { glVal = it; glErr = "" }, err = glErr,
             onCancel = { goalOpen = false }, onSave = { saveGoal() }
