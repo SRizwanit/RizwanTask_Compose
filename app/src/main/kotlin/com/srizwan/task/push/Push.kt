@@ -10,16 +10,22 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Matrix
+import android.graphics.Paint
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.PathParser
+import androidx.core.graphics.drawable.IconCompat
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.srizwan.task.MainActivity
-import com.srizwan.task.R
 import com.srizwan.task.core.AppScope
 import com.srizwan.task.core.Prefs
 import com.srizwan.task.core.Sb
@@ -147,6 +153,18 @@ object Push {
 
     private val KIND = mapOf("notice" to "নোটিশ", "review" to "রিভিউ", "payment" to "পেমেন্ট", "reward" to "রিওয়ার্ড")
 
+    /** Bell vector (24 x 24 path data), drawn in code into a white bitmap — the status bar tints it; no XML resource needed. */
+    private const val BELL = "M12,22c1.1,0 2,-0.9 2,-2h-4c0,1.1 0.9,2 2,2zM18,16v-5c0,-3.07 -1.64,-5.64 -4.5,-6.32V4c0,-0.83 -0.67,-1.5 -1.5,-1.5s-1.5,0.67 -1.5,1.5v0.68C7.63,5.36 6,7.92 6,11v5l-2,2v1h16v-1l-2,-2z"
+    private val statIconCache: IconCompat by lazy {
+        val px = 96
+        val bmp = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+        val path = PathParser.createPathFromPathData(BELL)
+        path.transform(Matrix().apply { setScale(px / 24f, px / 24f) })
+        Canvas(bmp).drawPath(path, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.FILL })
+        IconCompat.createWithBitmap(bmp)
+    }
+    private fun statIcon(): IconCompat = statIconCache
+
     @SuppressLint("MissingPermission")   // hasPermission() is checked by the caller
     private fun show(ctx: Context, n: JSONObject) {
         val id = n.optLong("id").toInt()
@@ -159,7 +177,7 @@ object Push {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val b = NotificationCompat.Builder(ctx, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_stat_notice)
+            .setSmallIcon(statIcon())
             .setContentTitle(title)
             .setContentText(body.ifEmpty { kind })
             .setSubText(kind)
