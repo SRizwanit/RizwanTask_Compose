@@ -57,6 +57,19 @@
             android:windowSoftInputMode="adjustResize"
             android:theme="@android:style/Theme.Material.Light.NoActionBar" />
 
+        <!-- "RizwanTask Log": second launcher icon. Own process + plain views, so it opens even when the app itself closes at start. -->
+        <activity
+            android:name=".LogActivity"
+            android:exported="true"
+            android:process=":log"
+            android:label="RizwanTask Log"
+            android:theme="@android:style/Theme.Material.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <!-- Crash debug screen: own process so it still opens when the app process is broken (report -> WhatsApp) -->
         <activity
             android:name=".CrashActivity"
