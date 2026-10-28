@@ -360,7 +360,7 @@ private fun ProfileCard(
             PalettePicker(
                 selected = ThemeStore.palette,
                 onSelect = { p ->
-                    ThemeStore.setPalette(p)
+                    ThemeStore.choosePalette(p)
                     AppToast.show("ডিজাইন থিম: " + p.label)
                 }
             )
