@@ -100,7 +100,7 @@ fun LoginScreen(vm: LoginViewModel = viewModel()) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Column(Modifier.widthIn(max = 440.dp).fillMaxWidth()) {
-                BrandHeader(title = "কিতাব প্রুফিং", subtitle = "মোবাইল নাম্বার দিয়ে লগইন করুন")
+                BrandHeader(title = "RizwanTask", subtitle = "মোবাইল নাম্বার দিয়ে লগইন করুন")
 
                 AppCard {
                     when (vm.step) {
@@ -183,7 +183,7 @@ fun LoginScreen(vm: LoginViewModel = viewModel()) {
                 }
 
                 Box(Modifier.padding(top = 16.dp, bottom = 20.dp)) {
-                    HintText("নতুন ইউজার? OTP ভেরিফাই করার পর প্রোফাইল তৈরি করুন", center = true)
+                    HintText("নতুন ইউজার? OTP ভেরিফাই করার পর প্রোফাইল তৈরি করুন", center = true, onBg = true)
                 }
             }
         }

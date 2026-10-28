@@ -158,7 +158,7 @@ fun SignupScreen(vm: SignupViewModel = viewModel()) {
                 }
 
                 Box(Modifier.padding(top = 14.dp, bottom = 20.dp)) {
-                    HintText("আপনার তথ্য নিরাপদে সংরক্ষিত থাকবে", center = true)
+                    HintText("আপনার তথ্য নিরাপদে সংরক্ষিত থাকবে", center = true, onBg = true)
                 }
             }
         }
