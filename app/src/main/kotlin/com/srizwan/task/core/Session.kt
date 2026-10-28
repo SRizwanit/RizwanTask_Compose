@@ -42,6 +42,7 @@ object Auth {
 
     fun logout() {
         Session.clear()
+        com.srizwan.task.screens.task.TaskCache.clear()   // offline cache of the Task page: never show it to another user
         _blocked.value = null
         Nav.go(Routes.LOGIN, replace = true)
     }

@@ -19,7 +19,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 /**
  * common.js `Net`: no-internet / slow-net message bar.
  *  - offline  : red bar + retry button (stays until the connection returns)
- *  - slow     : amber bar when a request takes > 9 s
+ *  - slow     : (no amber bar any more) a request taking > 9 s raises [problem] for the no-internet dialog
  *  - ok       : green "internet is back" bar for 2.5 s (+ [onlineEvents], same as the `kp-online` event)
  */
 object Net {
@@ -42,6 +42,17 @@ object Net {
     var isOnline: Boolean = true
         private set
 
+    private val _problem = MutableStateFlow(false)
+    /**
+     * "Real" connection problem flag for the no-internet dialog (Task page).
+     * true = a request failed ([fail]) or has been running longer than 9 s (slow timer in [start]),
+     * even though the system may think it is online. Cleared by the next successful request (Sb.req).
+     */
+    val problem: StateFlow<Boolean> = _problem.asStateFlow()
+
+    fun reportProblem() { _problem.value = true }
+    fun clearProblem() { _problem.value = false }
+
     private var started = false
     private var inflight = 0
     private var mode: Mode? = null
@@ -53,19 +64,21 @@ object Net {
         if (started) return
         started = true
         val cm = app.getSystemService(ConnectivityManager::class.java) ?: return
-        isOnline = cm.activeNetwork
-            ?.let { cm.getNetworkCapabilities(it)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) } == true
+        isOnline = cm.activeNetwork?.let { hasInternet(cm.getNetworkCapabilities(it)) } == true
         if (!isOnline) scope.launch { offline() }
         try {
             cm.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) {
+                // A connected network is not enough: it must also be VALIDATED (the system reached the internet through it).
+                // onAvailable fires before validation, so the online state is decided here, not there.
+                override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+                    val now = hasInternet(caps)
                     scope.launch {
                         val was = isOnline
-                        isOnline = true
-                        if (!was) {
+                        isOnline = now
+                        if (now && !was) {
                             show(Mode.OK, "ইন্টারনেট ফিরেছে", false, 2500)
                             _online.tryEmit(Unit)
-                        }
+                        } else if (!now && was) offline()
                     }
                 }
 
@@ -77,6 +90,11 @@ object Net {
             // no ACCESS_NETWORK_STATE -> keep working without the bar
         }
     }
+
+    /** Real internet: the network declares INTERNET and the system has VALIDATED it (not a captive portal / dead wifi). */
+    private fun hasInternet(c: NetworkCapabilities?): Boolean =
+        c != null && c.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            c.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 
     private fun show(m: Mode, text: String, retry: Boolean, autoHideMs: Long = 0) {
         hideJob?.cancel()
@@ -99,7 +117,8 @@ object Net {
             slowJob?.cancel()
             slowJob = scope.launch {
                 delay(9000)
-                if (inflight > 0 && isOnline && mode != Mode.OFF) show(Mode.SLOW, "নেট ধীর — একটু অপেক্ষা করুন…", false)
+                // পুরনো amber "নেট ধীর" বার আর নয় — ৯ সেকেন্ডে সাড়া না এলে নেট-সমস্যা ডায়লগের ফ্ল্যাগ চালু হয়
+                if (inflight > 0) reportProblem()
             }
         }
         return 1
@@ -118,6 +137,7 @@ object Net {
 
     /** A request failed because of the network. */
     fun fail() {
+        reportProblem()
         scope.launch {
             if (!isOnline) offline()
             else show(Mode.OFF, "সংযোগ পাওয়া যাচ্ছে না — নেট দুর্বল হতে পারে।", true, 7000)

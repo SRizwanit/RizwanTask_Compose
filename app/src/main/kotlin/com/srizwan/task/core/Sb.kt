@@ -1,6 +1,7 @@
 package com.srizwan.task.core
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import okhttp3.Call
@@ -25,7 +26,7 @@ class SbException(message: String) : Exception(message)
 object Sb {
     private val JSON_TYPE = "application/json".toMediaType()
     private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(20, TimeUnit.SECONDS)
+        .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .build()
@@ -54,12 +55,15 @@ object Sb {
                 }
                 b.method(method, rb)
                 b.build().let { client.newCall(it).await() }.use { r ->
+                    // সার্ভার সাড়া দিয়েছে (HTTP কোড যা-ই হোক) — সংযোগ ঠিক আছে, "নেট সমস্যা" ফ্ল্যাগ নামাও
+                    Net.clearProblem()
                     val t = r.body?.string().orEmpty()
                     if (!r.isSuccessful) throw SbException("$method ${path.substringBefore('?')} failed: ${r.code} $t")
                     parse(t)
                 }
             } catch (e: IOException) {
-                Net.fail()
+                // কাজ নিজেই বাতিল হলে (স্ক্রিন বদল ইত্যাদি) সেটা নেট সমস্যা নয়
+                if (isActive) Net.fail()
                 throw SbException(NET_MSG)
             } finally {
                 Net.end()
