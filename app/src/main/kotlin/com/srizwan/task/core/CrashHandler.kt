@@ -44,15 +44,21 @@ object CrashHandler {
         val short: String
     )
 
-    /** True inside the ":crash" process (RizwanApp must not start the normal app services there). */
-    fun isCrashProcess(): Boolean {
+    /** True inside the ":crash" / ":log" processes (RizwanApp must not start the normal app services there). */
+    fun isAuxProcess(): Boolean {
         val name: String = try {
             if (Build.VERSION.SDK_INT >= 28) Application.getProcessName()
             else File("/proc/self/cmdline").readText().trim('\u0000')
         } catch (_: Throwable) {
             ""
         }
-        return name.endsWith(":crash")
+        return name.endsWith(":crash") || name.endsWith(":log")
+    }
+
+    /** Deletes the saved crash report and the startup steps. */
+    fun clear(ctx: Context) {
+        try { File(ctx.filesDir, FILE).delete() } catch (_: Throwable) { }
+        Crumb.clear(ctx)
     }
 
     fun install(app: Application) {
@@ -211,5 +217,42 @@ object CrashHandler {
             }
         }
         return false
+    }
+}
+
+/**
+ * Startup steps: one line per step in filesDir (the file of the last launch + the launch before it).
+ * If the app dies silently (no Java crash), the last line shows how far it got. Shown by LogActivity.
+ */
+object Crumb {
+    private const val CUR = "startup_steps.txt"
+    private const val PREV = "startup_steps_prev.txt"
+
+    /** New launch: the old file becomes "previous", a fresh one is started. */
+    fun start(ctx: Context) {
+        try {
+            val cur = File(ctx.filesDir, CUR)
+            val prev = File(ctx.filesDir, PREV)
+            if (cur.exists()) { prev.delete(); cur.renameTo(prev) }
+            cur.writeText("launch " + SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date()) + "\n")
+        } catch (_: Throwable) { }
+    }
+
+    fun mark(ctx: Context, step: String) {
+        try {
+            File(ctx.filesDir, CUR).appendText(SimpleDateFormat("HH:mm:ss.SSS", Locale.US).format(Date()) + " " + step + "\n")
+        } catch (_: Throwable) { }
+    }
+
+    /** (last launch, the launch before). */
+    fun read(ctx: Context): Pair<String, String> = try {
+        val c = File(ctx.filesDir, CUR).let { if (it.exists()) it.readText() else "" }
+        val p = File(ctx.filesDir, PREV).let { if (it.exists()) it.readText() else "" }
+        c to p
+    } catch (_: Throwable) { "" to "" }
+
+    fun clear(ctx: Context) {
+        try { File(ctx.filesDir, CUR).delete() } catch (_: Throwable) { }
+        try { File(ctx.filesDir, PREV).delete() } catch (_: Throwable) { }
     }
 }
