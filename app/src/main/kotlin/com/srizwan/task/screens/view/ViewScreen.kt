@@ -287,7 +287,7 @@ private fun ViewBootEffect(st: ViewPageState, boot: ViewBoot, wantPage: String?)
                     else boot.finish()
                 }
                 s.failed -> boot.fail(s.error)
-                s.initing && !s.hasList -> { boot.clearFail(); boot.stage(45f, 80f, "রিপোজিটরি ও পেইজ তালিকা আনা হচ্ছে…") }
+                s.initing && !s.hasList -> { boot.clearFail(); boot.stage(45f, 80f, "পেইজ তালিকা আনা হচ্ছে…") }
                 s.initing && s.hasList && !s.opened -> boot.stage(80f, 88f, "পেইজ প্রস্তুত করা হচ্ছে…")
                 s.opened -> {
                     boot.stage(88f, 99f, "পেইজের ছবি ও লেখা আনা হচ্ছে…")
