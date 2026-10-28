@@ -19,11 +19,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.srizwan.task.core.Auth
+import com.srizwan.task.core.Crumb
 import com.srizwan.task.core.MotionStore
 import com.srizwan.task.nav.AppNav
 import com.srizwan.task.push.Push
@@ -37,7 +39,9 @@ import com.srizwan.task.ui.ToastHost
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Crumb.mark(this, "MainActivity.onCreate")
         enableEdgeToEdge()
+        Crumb.mark(this, "MainActivity.setContent")
         setContent {
             // Theme + colors live in Theme.kt (system / light / dark, saved by ThemeStore)
             RizwanTaskTheme {
@@ -55,6 +59,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         MotionStore.refresh(this)
+        Crumb.mark(this, "MainActivity.onResume")
     }
 }
 
@@ -74,6 +79,8 @@ private tailrec fun Context.findComponentActivity(): ComponentActivity? = when (
 fun AppRoot() {
     val dark = LocalAppDark.current
     val activity = LocalContext.current.findComponentActivity()
+    val appCtx = LocalContext.current
+    LaunchedEffect(Unit) { Crumb.mark(appCtx, "AppRoot first composition") }
 
     // Status / navigation bar icons follow the app theme (also when it differs from the phone's theme)
     DisposableEffect(dark) {
