@@ -139,8 +139,8 @@ fun rememberViewTextEditor(st: ViewPageState): ViewTextEditor {
 
 /** Clipboard text, or "" when empty / unreadable. */
 private fun clipText(context: Context): String = try {
-    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
+    val cm = context.getSystemService(ClipboardManager::class.java)
+    cm?.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
 } catch (_: Exception) { "" }
 
 /**

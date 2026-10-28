@@ -63,7 +63,7 @@ class TtsAudio(
         if (dead) return
         preload()
         job = scope.launch {
-            val r = data!!.await()
+            val r = data?.await() ?: return@launch
             if (dead) return@launch
             val b = r.bytes
             if (b == null) { cb.onError(r.why); return@launch }

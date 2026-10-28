@@ -16,6 +16,7 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import com.srizwan.task.core.ActivityLog
+import com.srizwan.task.core.MotionStore
 import com.srizwan.task.core.Prefs
 import com.srizwan.task.core.Sb
 import com.srizwan.task.core.ViewConfig
@@ -357,18 +358,19 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
         viewReady = false; loadErr = false
         lightbox.closeLightbox()
         putText(""); taLoading = true; placeholder = ""; orig = ""; sha = null
-        image = null
-        ldrShow(if (env.imgCache.has(im.name)) env.imgCache.pct(im.name) else 0f)
+        // a page that is already decoded in memory shows at once, without the loading ring
+        val hit = env.imgCache.peekBitmap(im.name)
+        image = hit
+        if (hit == null) ldrShow(if (env.imgCache.has(im.name)) env.imgCache.pct(im.name) else 0f)
+        else { imgMsg = ""; ldrOn = false }
         updateStatus()
 
         coroutineScope {
             val imgP = async {
                 try {
-                    val vi = env.imgCache.get(im.name)
+                    val bmp = env.imgCache.getBitmap(im.name)      // bitmap cache -> disk -> GitHub; decoded off the main thread
                     if (my != seq) return@async
                     if (ldrOn) ldrPct = 100f
-                    val bmp = withContext(Dispatchers.Default) { vi.decode() }
-                    if (my != seq) return@async
                     if (bmp == null) showImgMsg("ছবি দেখানো যায়নি") else {
                         image = bmp
                         showImgMsg("")
@@ -388,8 +390,16 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
         }
         viewReady = true
         onPageLoaded()                               // empty text: API-1 may start by itself
-        val nx = stepVis(cur, 1)                     // pre-load the next visible image
-        if (nx >= 0) { val nn = images[nx].name; scope.launch { try { env.imgCache.get(nn) } catch (e: CancellationException) { throw e } catch (_: Exception) { } } }
+        // pre-load around this page: the next one is also decoded (instant page turn); the one after it and the previous one only
+        // go to the disk cache. With battery saver on only the next page is loaded (less network / battery).
+        val nx = stepVis(cur, 1)
+        if (nx >= 0) env.imgCache.prefetch(images[nx].name, decode = true)
+        if (!MotionStore.powerSave) {
+            val nx2 = if (nx >= 0) stepVis(nx, 1) else -1
+            if (nx2 >= 0) env.imgCache.prefetch(images[nx2].name, decode = false)
+            val pi = stepVis(cur, -1)
+            if (pi >= 0) env.imgCache.prefetch(images[pi].name, decode = false)
+        }
     }
 
     private suspend fun loadText(my: Int, im: ViewImageRef) {
@@ -621,8 +631,8 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
         if (env.cfg.cfg.str("token").isNullOrEmpty() && ctx.isAdmin) onOpenSettings() else init(wantPage)
     }
 
-    /** React reload button: `imgCache.clear(); init()`. */
-    suspend fun reload(wantPage: String?) { env.imgCache.clear(); init(wantPage) }
+    /** React reload button: `imgCache.clear(); init()` — here also the disk copies are dropped, so the pages come fresh from GitHub. */
+    suspend fun reload(wantPage: String?) { env.imgCache.clearAll(); init(wantPage) }
 
     // ---------------- who proofed which page (Supabase: page_proofs) ----------------
     // A page has exactly one owner. Whoever proofed it sees it (and the admin); for everybody else it is hidden from the list,
@@ -980,8 +990,8 @@ class ViewPageState(private val env: ViewEnv, private val scope: CoroutineScope)
     fun pasteClick(context: Context) {
         if (cur < 0 || taLoading) return
         try {
-            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            val t = cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
+            val cm = context.getSystemService(ClipboardManager::class.java)
+            val t = cm?.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
             if (t.isEmpty()) { env.toaster.toast("ক্লিপবোর্ড খালি", true); return }
             insertAtStart(t, true)
         } catch (e: CancellationException) { throw e

@@ -33,6 +33,7 @@ import com.srizwan.task.core.openBrowserApp
 import com.srizwan.task.core.openUrl
 import com.srizwan.task.ui.AppIcon
 import com.srizwan.task.ui.ViewIcon
+import com.srizwan.task.ui.hapticClickable
 import com.srizwan.task.ui.viewColors
 
 /**
@@ -94,7 +95,7 @@ private fun AiAction(label: String, icon: @Composable () -> Unit, filled: Boolea
         Modifier.fillMaxWidth().clip(shape)
             .background(if (filled) c.pri else Color.Transparent)
             .then(if (filled) Modifier else Modifier.border(BorderStroke(1.dp, c.line), shape))
-            .clickable(onClick = onClick)
+            .hapticClickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
