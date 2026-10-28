@@ -44,7 +44,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.srizwan.task.core.ActivityLog
 import com.srizwan.task.core.AppScope
 import com.srizwan.task.core.AppToast
@@ -56,6 +55,7 @@ import com.srizwan.task.core.finiteNum
 import com.srizwan.task.core.jsonOf
 import com.srizwan.task.core.openUrl
 import com.srizwan.task.core.str
+import com.srizwan.task.ui.CoverImage
 import com.srizwan.task.ui.AppField
 import com.srizwan.task.ui.AppIcon
 import com.srizwan.task.ui.ErrText
@@ -425,9 +425,9 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
         }
 
         if (books.isEmpty()) {
-            Empty("কোনো কিতাব যোগ করা হয়নি")
+            Empty("কোনো কিতাব যোগ করা হয়নি", art = "books")
         } else if (shown.isEmpty()) {
-            Empty("কোনো কিতাব মেলেনি — সার্চ বা ফিল্টার বদলান")
+            Empty("কোনো কিতাব মেলেনি — সার্চ বা ফিল্টার বদলান", art = "search")
         } else {
             shown.forEach { b ->
                 val id = b.idStr()
@@ -450,7 +450,7 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                                     contentAlignment = Alignment.Center
                                 ) {
                                     val cover = b.str("cover_url").orEmpty()
-                                    if (cover.isNotEmpty()) AsyncImage(model = cover, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                    if (cover.isNotEmpty()) CoverImage(cover, Modifier.fillMaxSize())
                                     else AppIcon("book", size = 20.dp, tint = cs.onSurfaceVariant)
                                 }
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {

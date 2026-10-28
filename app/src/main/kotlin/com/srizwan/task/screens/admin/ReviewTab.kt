@@ -257,7 +257,7 @@ fun ReviewTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
         }
 
         if (rows.isEmpty()) {
-            Empty("এই ফিল্টারে কোনো পেইজ নেই")
+            Empty("এই ফিল্টারে কোনো পেইজ নেই", art = "list")
         } else {
             rows.forEach { r ->
                 val k = rvKey(r)

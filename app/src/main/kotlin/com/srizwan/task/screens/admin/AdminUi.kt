@@ -39,6 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.srizwan.task.ui.AppIcon
+import com.srizwan.task.ui.EmptyArt
+import com.srizwan.task.ui.hapticClickable
 import com.srizwan.task.ui.errColor
 import com.srizwan.task.ui.goldColor
 import com.srizwan.task.ui.okColor
@@ -47,11 +49,19 @@ import kotlinx.coroutines.CompletableDeferred
 
 /** React admin/ui.jsx — small shared UI pieces for the Admin tabs. */
 
-/** `.empty` */
+/** `.empty` — a small illustration ([art], see `EmptyArt`; null = text only) above the message. */
 @Composable
-fun Empty(text: String, pad: Boolean = false) {
-    Box(Modifier.fillMaxWidth().padding(if (pad) 18.dp else 8.dp)) {
-        Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+fun Empty(text: String, pad: Boolean = false, art: String? = "inbox") {
+    Column(
+        Modifier.fillMaxWidth().padding(if (pad) 18.dp else 8.dp),
+        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        if (art != null) EmptyArt(art, size = 72.dp)
+        Text(
+            text, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
     }
 }
 
@@ -62,7 +72,8 @@ fun Tile(n: String, l: String, modifier: Modifier = Modifier, hl: Boolean = fals
     val shape = RoundedCornerShape(14.dp)
     Column(
         modifier.clip(shape)
-            .background(if (hl) goldColor().copy(alpha = 0.12f) else cs.background)
+            // the highlighted tile has the same solid background as the others (only its border is gold)
+            .background(cs.background)
             .border(1.dp, if (hl) goldColor() else cs.outline.copy(alpha = 0.5f), shape)
             .padding(horizontal = 14.dp, vertical = 13.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp)
@@ -96,9 +107,10 @@ fun Chips(items: List<Pair<String, String>>, value: String, onPick: (String) -> 
             val shape = RoundedCornerShape(99.dp)
             Box(
                 Modifier.clip(shape)
-                    .background(if (on) cs.primary else cs.surfaceVariant.copy(alpha = 0.55f))
+                    .background(if (on) cs.primary else cs.surface.copy(alpha = 0.6f))
+                    .background(if (on) Color.Transparent else cs.surfaceVariant.copy(alpha = 0.55f))
                     .border(1.dp, if (on) cs.primary else cs.outline.copy(alpha = 0.5f), shape)
-                    .clickable { onPick(v) }
+                    .hapticClickable { onPick(v) }
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text(label, color = if (on) cs.onPrimary else cs.onSurface, fontSize = 13.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal)
@@ -228,7 +240,7 @@ fun SmBtn(text: String, icon: String? = null, tone: String = "", enabled: Boolea
         Modifier.alpha(if (enabled) 1f else 0.5f).clip(shape)
             .background(when (tone) { "" -> cs.surfaceVariant.copy(alpha = 0.55f); "primary" -> cs.primary; else -> Color.Transparent })
             .border(1.dp, when (tone) { "" -> cs.outline.copy(alpha = 0.6f); "primary" -> cs.primary; else -> c }, shape)
-            .clickable(enabled = enabled, onClick = onClick)
+            .hapticClickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = if (compact) 8.dp else 10.dp, vertical = if (compact) 2.dp else 7.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp)

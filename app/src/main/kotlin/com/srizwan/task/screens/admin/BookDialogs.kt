@@ -325,7 +325,8 @@ private suspend fun postBatch(chunk: List<JSONObject>): JSONArray {
 }
 
 private fun readText(ctx: Context, uri: Uri): String =
-    ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes().toString(Charsets.UTF_8) }
+    (ctx.contentResolver.openInputStream(uri) ?: throw java.io.FileNotFoundException(uri.toString()))
+        .use { it.readBytes().toString(Charsets.UTF_8) }
 
 private fun fileName(ctx: Context, uri: Uri): String = try {
     ctx.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->

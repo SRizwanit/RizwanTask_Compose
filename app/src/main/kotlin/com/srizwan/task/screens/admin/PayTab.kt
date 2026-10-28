@@ -167,7 +167,7 @@ fun PayTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
         if (loading) {
             Spinner(true)
         } else if (list.isEmpty()) {
-            Empty("কোনো পেমেন্ট নেই")
+            Empty("কোনো পেমেন্ট নেই", art = "wallet")
         } else {
             list.forEach { x ->
                 val id = x.idStr()

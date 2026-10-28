@@ -44,6 +44,7 @@ import com.srizwan.task.ui.AppIcon
 import com.srizwan.task.ui.HintText
 import com.srizwan.task.ui.ThemeToggleButton
 import com.srizwan.task.ui.errColor
+import com.srizwan.task.ui.hapticClickable
 
 /** (key, icon, label, badge?) — React TABS. The "Supp" tab (Firebase tickets) is not converted: Support is a WebView now. */
 private class AdminTab(val key: String, val icon: String, val label: String, val badge: String? = null, val step: String)
@@ -118,10 +119,7 @@ private fun AdminHeader() {
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         SmallBtn("টাস্ক", "left") { Nav.go("task") }
-        Text(
-            "অ্যাডমিন প্যানেল", color = cs.onBackground, fontSize = 17.sp, fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f), maxLines = 1
-        )
+        com.srizwan.task.screens.task.HeaderTitle("অ্যাডমিন প্যানেল", Modifier.weight(1f))
         ThemeToggleButton()
         SmallBtn("লগআউট", "logout") { Auth.logout() }
     }
@@ -133,9 +131,10 @@ private fun SmallBtn(text: String, icon: String, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     Row(
         Modifier.clip(shape)
+            .background(cs.surface.copy(alpha = 0.72f))
             .background(cs.surfaceVariant.copy(alpha = 0.55f))
             .border(1.dp, cs.outline.copy(alpha = 0.6f), shape)
-            .clickable(onClick = onClick)
+            .hapticClickable(onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -160,10 +159,10 @@ private fun AdminTabBar(vm: AdminViewModel, badges: Map<String, Int>) {
                 Modifier.clip(shape)
                     .then(
                         if (on) Modifier.background(Brush.linearGradient(listOf(cs.primary, cs.secondary)))
-                        else Modifier.background(cs.surfaceVariant.copy(alpha = 0.55f))
+                        else Modifier.background(cs.surface.copy(alpha = 0.72f)).background(cs.surfaceVariant.copy(alpha = 0.55f))
                     )
                     .border(1.dp, if (on) cs.primary else cs.outline.copy(alpha = 0.6f), shape)
-                    .clickable { vm.openTab(t.key) }
+                    .hapticClickable { vm.openTab(t.key) }
                     .padding(horizontal = 12.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)

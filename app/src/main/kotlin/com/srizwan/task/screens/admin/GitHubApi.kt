@@ -138,7 +138,7 @@ suspend fun fetchRunState(S: JSONObject, b: JSONObject, info: RunInfo, onId: (St
         if (!r.ok) throw Exception(ghErr(r))
         val t = (Fmt.parseInstant(info.at)?.toEpochMilli() ?: 0L) - 60000
         val arr = r.json().optJSONArray("workflow_runs")
-        val cand = (0 until (arr?.length() ?: 0)).map { arr!!.getJSONObject(it) }
+        val cand = (0 until (arr?.length() ?: 0)).mapNotNull { arr?.getJSONObject(it) }
             .filter { (Fmt.parseInstant(it.optString("created_at"))?.toEpochMilli() ?: 0L) >= t }
             .minByOrNull { Fmt.parseInstant(it.optString("created_at"))?.toEpochMilli() ?: 0L }
             ?: return RunState("queued")
@@ -157,7 +157,7 @@ suspend fun fetchRunState(S: JSONObject, b: JSONObject, info: RunInfo, onId: (St
                 val jobs = rj.json().optJSONArray("jobs")
                 val steps = ArrayList<JSONObject>()
                 for (i in 0 until (jobs?.length() ?: 0)) {
-                    val st = jobs!!.getJSONObject(i).optJSONArray("steps") ?: continue
+                    val st = jobs?.getJSONObject(i)?.optJSONArray("steps") ?: continue
                     for (k in 0 until st.length()) steps.add(st.getJSONObject(k))
                 }
                 val cur = steps.firstOrNull { it.optString("status") == "in_progress" }
@@ -181,7 +181,7 @@ suspend fun countPages(S: JSONObject, b: JSONObject): PageCount {
     val img = Regex("\\.(jpe?g|png|webp)$", RegexOption.IGNORE_CASE)
     var n = 0
     for (i in 0 until (tree?.length() ?: 0)) {
-        val e = tree!!.getJSONObject(i)
+        val e = tree?.getJSONObject(i) ?: continue
         if (e.optString("type") == "blob" && e.optString("path").startsWith(dir) && img.containsMatchIn(e.optString("path"))) n++
     }
     return PageCount(n, j.optBoolean("truncated", false), dir)

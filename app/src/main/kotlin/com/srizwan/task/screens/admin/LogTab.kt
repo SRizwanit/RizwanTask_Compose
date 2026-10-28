@@ -106,7 +106,7 @@ fun LogTab(vm: AdminViewModel, openKey: Int) {
         if (err.isNotEmpty()) {
             NoticeBox(err)
         } else if (rows.isEmpty()) {
-            Empty("কোনো লগ নেই", pad = true)
+            Empty("কোনো লগ নেই", pad = true, art = "list")
         } else {
             rows.forEach { x ->
                 val action = x.str("action").orEmpty()
