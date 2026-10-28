@@ -1,11 +1,13 @@
 package com.srizwan.task.ui
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import com.srizwan.task.core.Fmt
@@ -48,6 +50,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
@@ -61,15 +64,38 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.srizwan.task.LocalAppDark
+import com.srizwan.task.THEME_FADE_MS
 import com.srizwan.task.core.AppToast
 import com.srizwan.task.core.ThemeMode
 import com.srizwan.task.core.ThemeStore
 
 // ---- React CSS variables that Material3 has no slot for ----
-@Composable fun errColor(): Color = if (LocalAppDark.current) Color(0xFFF87171) else Color(0xFFDC2626)
-@Composable fun okColor(): Color = if (LocalAppDark.current) Color(0xFF6FD08C) else Color(0xFF15803D)
-@Composable fun warnColor(): Color = if (LocalAppDark.current) Color(0xFFFBBF24) else Color(0xFFB45309)
-@Composable fun goldColor(): Color = if (LocalAppDark.current) Color(0xFFE8C56F) else Color(0xFFC9972B)
+// (they glide to the other day / night value when the theme changes, like the Material colours do)
+@Composable private fun themeFade(c: Color): Color = animateColorAsState(c, tween(THEME_FADE_MS), label = "themeFade").value
+@Composable fun errColor(): Color = themeFade(if (LocalAppDark.current) Color(0xFFF87171) else Color(0xFFDC2626))
+@Composable fun okColor(): Color = themeFade(if (LocalAppDark.current) Color(0xFF6FD08C) else Color(0xFF15803D))
+@Composable fun warnColor(): Color = themeFade(if (LocalAppDark.current) Color(0xFFFBBF24) else Color(0xFFB45309))
+@Composable fun goldColor(): Color = themeFade(if (LocalAppDark.current) Color(0xFFE8C56F) else Color(0xFFC9972B))
+
+
+/**
+ * Frosted-glass panel for text that sits directly on the animated background: a light tint taken from the theme's own
+ * background colour (so it always matches the current theme + day/night), a soft top-to-bottom sheen and a thin glass
+ * edge. Keeps text readable over flowers / bubbles / stars without hiding the scenery.
+ * Put the inner padding AFTER it: `Modifier.glass().padding(12.dp)`.
+ */
+@Composable
+fun Modifier.glass(shape: Shape = RoundedCornerShape(14.dp), strength: Float = 1f): Modifier {
+    val cs = MaterialTheme.colorScheme
+    val dark = LocalAppDark.current
+    val tint = cs.background.copy(alpha = ((if (dark) 0.66f else 0.70f) * strength).coerceIn(0f, 1f))
+    val edgeTop = Color.White.copy(alpha = if (dark) 0.22f else 0.55f)
+    return this
+        .clip(shape)
+        .background(tint)
+        .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = if (dark) 0.07f else 0.22f), Color.White.copy(alpha = 0.02f))))
+        .border(1.dp, Brush.verticalGradient(listOf(edgeTop, cs.outline.copy(alpha = 0.35f))), shape)
+}
 
 /** `.brand`: logo tile + title + subtitle (+ optional extra, e.g. a badge). */
 @Composable
@@ -92,8 +118,15 @@ fun BrandHeader(
         ) {
             AppIcon(icon, size = if (icon == "mark") 42.dp else 30.dp, tint = cs.onPrimary)
         }
-        Text(title, color = cs.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-        if (subtitle != null) Text(subtitle, color = cs.onSurfaceVariant, fontSize = 13.sp, textAlign = TextAlign.Center)
+        // title + subtitle on a glass panel, so they stay readable over the animated background
+        Column(
+            Modifier.glass(RoundedCornerShape(16.dp)).padding(horizontal = 20.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(title, color = cs.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            if (subtitle != null) Text(subtitle, color = cs.onSurfaceVariant, fontSize = 13.sp, textAlign = TextAlign.Center)
+        }
         extra?.invoke()
     }
 }
@@ -213,7 +246,7 @@ fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifi
             .alpha(if (enabled) 1f else 0.5f)
             .clip(shape)
             .background(Brush.linearGradient(listOf(cs.primary, cs.secondary)))
-            .clickable(enabled = enabled, onClick = onClick)
+            .hapticClickable(enabled = enabled, onClick = onClick)
             .drawWithContent {
                 drawContent()
                 val w = size.width
@@ -250,7 +283,7 @@ fun BlockButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier
         modifier.fillMaxWidth().alpha(if (enabled) 1f else 0.5f).clip(shape)
             .background(cs.surfaceVariant.copy(alpha = 0.55f))
             .border(1.dp, cs.outline.copy(alpha = 0.6f), shape)
-            .clickable(enabled = enabled, onClick = onClick)
+            .hapticClickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 11.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -268,7 +301,7 @@ fun OutlineButton(text: String, onClick: () -> Unit, color: Color, modifier: Mod
     Box(
         modifier.fillMaxWidth().alpha(if (enabled) 1f else 0.5f).clip(shape)
             .border(1.dp, color, shape)
-            .clickable(enabled = enabled, onClick = onClick)
+            .hapticClickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 11.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -292,7 +325,7 @@ fun LinkButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier,
     val cs = MaterialTheme.colorScheme
     Box(
         modifier.fillMaxWidth().alpha(if (enabled) 1f else 0.5f)
-            .clickable(enabled = enabled, onClick = onClick)
+            .hapticClickable(enabled = enabled, onClick = onClick)
             .padding(top = 10.dp, bottom = 4.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -327,10 +360,12 @@ fun ErrText(text: String) {
 
 /** `.hint` */
 @Composable
-fun HintText(text: String, modifier: Modifier = Modifier, center: Boolean = false) {
+fun HintText(text: String, modifier: Modifier = Modifier, center: Boolean = false, onBg: Boolean = false) {
+    // onBg = the hint sits directly on the background (not inside a card): put it on a glass panel
+    val base = if (onBg) modifier.fillMaxWidth().glass(RoundedCornerShape(12.dp)).padding(horizontal = 14.dp, vertical = 9.dp) else modifier.fillMaxWidth()
     Text(
         text, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, lineHeight = 18.sp,
-        textAlign = if (center) TextAlign.Center else TextAlign.Start, modifier = modifier.fillMaxWidth()
+        textAlign = if (center) TextAlign.Center else TextAlign.Start, modifier = base
     )
 }
 
@@ -338,6 +373,7 @@ fun HintText(text: String, modifier: Modifier = Modifier, center: Boolean = fals
 @Composable
 fun SegChoice(options: List<Pair<String, String>>, selected: String, onSelect: (String) -> Unit) {
     val cs = MaterialTheme.colorScheme
+    val tick = rememberTick()
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { (value, label) ->
             val on = value == selected
@@ -349,7 +385,7 @@ fun SegChoice(options: List<Pair<String, String>>, selected: String, onSelect: (
                         else Modifier.background(cs.surfaceVariant.copy(alpha = 0.55f))
                     )
                     .border(1.dp, if (on) cs.primary else cs.outline.copy(alpha = 0.6f), shape)
-                    .selectable(selected = on, role = Role.RadioButton, onClick = { onSelect(value) })
+                    .selectable(selected = on, role = Role.RadioButton, onClick = { tick(); onSelect(value) })
                     .padding(10.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -363,7 +399,8 @@ fun SegChoice(options: List<Pair<String, String>>, selected: String, onSelect: (
 @Composable
 fun OkBadge(text: String, modifier: Modifier = Modifier) {
     val c = okColor()
-    Box(modifier.clip(CircleShape).background(c.copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 1.dp)) {
+    // solid theme colour under the tint: stays readable when the badge sits straight on the animated background
+    Box(modifier.clip(CircleShape).background(MaterialTheme.colorScheme.background.copy(alpha = 0.88f)).background(c.copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 1.dp)) {
         Text(text, color = c, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
 }
@@ -380,9 +417,10 @@ fun ThemeToggleButton(modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(8.dp)
     Box(
         modifier.size(36.dp).clip(shape)
+            .background(cs.surface.copy(alpha = 0.72f))
             .background(cs.surfaceVariant.copy(alpha = 0.55f))
             .border(1.dp, cs.outline.copy(alpha = 0.6f), shape)
-            .clickable {
+            .hapticClickable {
                 ThemeStore.set(ThemeStore.next())
                 AppToast.show("থিম: " + ThemeStore.label())
             },

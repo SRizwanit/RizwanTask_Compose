@@ -67,6 +67,7 @@ fun ViewBtn(
     flat: Boolean = false
 ) {
     val c = viewColors()
+    val tick = rememberTick()
     val dark = LocalAppDark.current
     val filledText = if (dark) Color(0xFF0B0D10) else Color.White
     val (bg, fg, edge) = when (kind) {
@@ -89,7 +90,7 @@ fun ViewBtn(
             modifier.then(sizeMod).alpha(if (enabled) 1f else 0.5f).clip(shape).background(if (flat) Color.Transparent else bg).then(if (flat) Modifier else Modifier.border(1.dp, edge, shape))
                 .semantics { contentDescription = desc ?: label ?: hint.orEmpty(); role = Role.Button }
                 .combinedClickable(
-                    enabled = enabled, onClick = onClick,
+                    enabled = enabled, onClick = { tick(); onClick() },
                     onLongClick = if (hint != null) ({ onHint(hint) }) else null
                 )
                 .padding(horizontal = if (label != null) padH else if (width != null) 0.dp else 10.dp),

@@ -80,7 +80,7 @@ fun NetBar() {
                         Box(
                             Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.16f))
                                 .border(1.dp, Color.White.copy(alpha = 0.6f), CircleShape)
-                                .clickable { Net.retry() }
+                                .hapticClickable { Net.retry() }
                                 .padding(horizontal = 12.dp, vertical = 3.dp)
                         ) {
                             Text("আবার চেষ্টা", color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
