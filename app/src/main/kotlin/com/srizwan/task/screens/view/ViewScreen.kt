@@ -107,6 +107,8 @@ fun ViewScreen(bookId: String?, wantPage: String?) {
         }
         // one instance for the whole way (book load -> page init -> first page), so the card never restarts
         ViewEntryLoading(boot, onBack = { Nav.go(Routes.TASK, replace = true) })
+        // before the book is loaded there is no page state yet: the loading-phase dialog (the page phase is inside ViewPage)
+        if (c == null) ViewNetDialog(boot, null, onBack = { Nav.go(Routes.TASK, replace = true) })
     }
 
     lockedBy?.let { who ->
@@ -250,6 +252,7 @@ fun ViewPage(env: ViewEnv, wantPage: String?, boot: ViewBoot? = null) {
     ViewConfirmDialog(confirmState)                             // React `window.confirm` (4-nya-3-ngo)
     ViewSaveWaitDialog(st)                                      // "সেভ ও পরের": ৩০ সেকেন্ডের কাউন্টডাউন ডায়ালগ
     SettingsDialog(env, tts, settings)                          // React `<SettingsDialog … />` (4-nya-1) — admin only
+    if (boot != null) ViewNetDialog(boot, st, onBack = { Nav.go(Routes.TASK, replace = true) })   // "check your internet" (same as the Task page)
     ViewLightbox(st.lightbox) { scope.launch { env.downloadCurrent(context, st.currentName ?: st.lightbox.title.ifEmpty { null }) } }
 }
 
