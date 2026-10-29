@@ -1,5 +1,7 @@
 package com.srizwan.task.core
 
+import com.srizwan.task.screens.admin.GhAccounts
+import com.srizwan.task.screens.admin.isDefaultPrompt
 import org.json.JSONObject
 
 /**
@@ -131,23 +133,26 @@ object ViewConfig {
         val b = book
         val st = settings ?: JSONObject()
         // Blank on the book -> admin default (app_settings); blank there too -> SunniPedia/pdftojpg
-        val gu = trimSl(b.str("github_username")).ifEmpty { trimSl(st.str("github_username")) }.ifEmpty { "SunniPedia" }
-        val gr = trimSl(b.str("repo_name")).ifEmpty { trimSl(st.str("repo_name")) }.ifEmpty { "pdftojpg" }
-        cfg.put("repo", "$gu/$gr")
+        // Update_admin 5-খ: the book's chosen GitHub account (books.gh_account; none / deleted = Default) gives token / Username / Repo:
+        // book's own value -> account's value -> admin default -> SunniPedia/pdftojpg
+        val gh = GhAccounts.resolve(st, b)
+        cfg.put("repo", "${gh.username}/${gh.repo}")
         cfg.put("branch", (b.truthyStr("branch").ifEmpty { st.truthyStr("branch") }).trim())
         cfg.put("book", trimSl(b.truthyStr("folder").ifEmpty { b.str("name").orEmpty() }))   // -> <book>_pages, <book>_texts, <book>_proofed.json
         if (st.truthyStr("pages_dir").isNotEmpty()) cfg.put("pagesDir", trimSl(st.str("pages_dir")))
         if (st.truthyStr("texts_dir").isNotEmpty()) cfg.put("textsDir", trimSl(st.str("texts_dir")))
         if (st.truthyStr("proof_file").isNotEmpty()) cfg.put("proofFile", st.str("proof_file").orEmpty().trim().replace(Regex("^/+"), ""))
         if (st.truthyStr("proof_dir").isNotEmpty()) cfg.put("proofDir", trimSl(st.str("proof_dir")))
-        if (st.truthyStr("github_token").isNotEmpty()) cfg.put("token", st.str("github_token"))
+        if (gh.token.isNotEmpty()) cfg.put("token", gh.token)   // the account's token (Default account = app_settings.github_token)
         for (n in 1..2) {
             val c = JSONObject(cfg.getJSONObject("api$n").toString())
             if (st.truthyStr("gemini_api_key").isNotEmpty()) c.put("key", st.str("gemini_api_key"))
             if (st.truthyStr("gemini_model").isNotEmpty()) c.put("model", st.str("gemini_model"))
             val t = st.str("gemini_temp")
             if (t != null && t != "") c.put("temp", t.trim().toDoubleOrNull()?.takeIf { it.isFinite() } ?: 0.0)
-            val p = if (n == 1) st.truthyStr("prompt_ocr") else st.truthyStr("prompt_proof")
+            // Update_admin 5-খ: the book's own prompt (books.prompt_ocr / prompt_proof) wins; blank / "Default" = the admin Settings prompt
+            val bp = if (n == 1) b.truthyStr("prompt_ocr") else b.truthyStr("prompt_proof")
+            val p = if (!isDefaultPrompt(bp)) bp.trim() else if (n == 1) st.truthyStr("prompt_ocr") else st.truthyStr("prompt_proof")
             if (p.isNotEmpty()) c.put("prompt", p)
             cfg.put("api$n", c)
         }
