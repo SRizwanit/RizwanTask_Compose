@@ -7,7 +7,13 @@ import android.os.Environment
 import android.provider.MediaStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -22,12 +28,51 @@ object ViewDownload {
 
     private val http = OkHttpClient()
 
+    /**
+     * State of the download dialog (ui/ViewDownloadDialog.kt): [show] = dialog visible, [book] = book name, [page] = page number
+     * in Bengali digits (e.g. "১২"), [pct] = 0..100. One download at a time, so one shared state is enough.
+     */
+    data class Progress(val show: Boolean = false, val book: String = "", val page: String = "", val pct: Float = 0f)
+
+    private val _progress = MutableStateFlow(Progress())
+    val progress: StateFlow<Progress> = _progress.asStateFlow()
+
+    private fun setPct(p: Float) { _progress.value = _progress.value.copy(pct = maxOf(_progress.value.pct, p.coerceIn(0f, 100f))) }
+
+    /** Page number of an image file name: the trailing digits of the name without extension ("0012.jpg" -> 12); null if none. */
+    fun pageNumber(imageName: String): Int? {
+        val stem = imageName.substringAfterLast('/').substringBeforeLast('.')
+        return Regex("(\\d+)$").find(stem)?.groupValues?.get(1)?.toIntOrNull()
+    }
+
+    /** Reads [body] in chunks; the percentage follows the bytes read when the size is known (the first 90%, the rest is saving). */
+    private suspend fun readWithProgress(body: okhttp3.ResponseBody?): ByteArray = withContext(Dispatchers.IO) {
+        if (body == null) return@withContext ByteArray(0)
+        val total = body.contentLength()
+        val out = ByteArrayOutputStream(if (total in 1..Int.MAX_VALUE.toLong()) total.toInt() else 64 * 1024)
+        val buf = ByteArray(16 * 1024)
+        var read = 0L
+        var lastPct = -1
+        body.byteStream().use { ins ->
+            while (true) {
+                val n = ins.read(buf)
+                if (n < 0) break
+                out.write(buf, 0, n); read += n
+                if (total > 0) {
+                    val pc = (read * 90 / total).toInt()
+                    if (pc != lastPct) { lastPct = pc; setPct(pc.toFloat()) }
+                }
+            }
+        }
+        out.toByteArray()
+    }
+
     /** The image is saved here so the user can find it; the same name as in the repo (React `a.download = im.name`). */
     private suspend fun fetchOriginal(gh: ViewGithub, name: String): ByteArray {
         val path = gh.rawPath(name)
         var buf: ByteArray = gh.api(path, headers = mapOf("Accept" to "application/vnd.github.raw+json")).use { r ->
             if (!r.isSuccessful) throw Exception(gh.errMsg(r))
-            withContext(Dispatchers.IO) { r.body?.bytes() ?: ByteArray(0) }
+            readWithProgress(r.body)
         }
         if (buf.size < 2048) {   // too small (maybe an error response): try again through download_url
             val rj = gh.apiText(path)
@@ -93,12 +138,24 @@ object ViewDownload {
         if (name.isNullOrEmpty()) { toaster.toast("কোনো ছবি খোলা নেই", true); return }
         val mime = ViewUtils.MIME_BY_EXT[ViewUtils.extOf(name)] ?: "application/octet-stream"
         val saveName = fileName(bookName, name)
+        val pageNo = pageNumber(name)?.let { ViewUtils.bnNum(it) } ?: ViewUtils.bnNum(name.substringAfterLast('/').substringBeforeLast('.'))
+        _progress.value = Progress(show = true, book = bookName, page = pageNo, pct = 0f)
         try {
-            toaster.toast("মূল ছবি আনা হচ্ছে…", false, 4000)
-            val buf = fetchOriginal(gh, name)
+            // when the server sends no size the real percentage is unknown: creep forward slowly (up to 85%) so the bar never looks stuck
+            val buf = kotlinx.coroutines.coroutineScope {
+                val tick = launch { while (true) { delay(150); val c = _progress.value.pct; if (c < 85f) setPct(c + maxOf(0.4f, (85f - c) * 0.05f)) } }
+                try { fetchOriginal(gh, name) } finally { tick.cancel() }
+            }
+            setPct(95f)
             withContext(Dispatchers.IO) { save(ctx, saveName, mime, buf) }
+            setPct(100f)
+            delay(500)                                   // let the person see 100% before the dialog goes away
+            _progress.value = _progress.value.copy(show = false)
             toaster.toast("ডাউনলোড: " + saveName + " (" + String.format(Locale.US, "%.2f", buf.size / 1048576.0) + " MB) — ফোনের Downloads ফোল্ডারে সেভ হয়েছে", false, 3500)
-        } catch (e: CancellationException) { throw e
-        } catch (e: Exception) { toaster.toast("ডাউনলোড ব্যর্থ: " + (e.message ?: ""), true) }
+        } catch (e: CancellationException) { _progress.value = _progress.value.copy(show = false); throw e
+        } catch (e: Exception) {
+            _progress.value = _progress.value.copy(show = false)
+            toaster.toast("ডাউনলোড ব্যর্থ: " + (e.message ?: ""), true)
+        }
     }
 }
