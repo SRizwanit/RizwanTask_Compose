@@ -15,6 +15,10 @@ internal val ICON_PATHS: Map<String, List<IconPath>> = mapOf(
     "shield" to listOf(IconPath("M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z")),
     "logout" to listOf(IconPath("M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"), IconPath("M16 17L21 12L16 7"), IconPath("M21 12L9 12")),
     "left" to listOf(IconPath("M15 18L9 12L15 6")),
+    // pagination: next page / first page / last page (Feather "chevron-right", "chevrons-left", "chevrons-right")
+    "right" to listOf(IconPath("M9 18L15 12L9 6")),
+    "first" to listOf(IconPath("M11 17L6 12L11 7"), IconPath("M18 17L13 12L18 7")),
+    "last" to listOf(IconPath("M13 17L18 12L13 7"), IconPath("M6 17L11 12L6 7")),
     "plus" to listOf(IconPath("M12 5L12 19"), IconPath("M5 12L19 12")),
     "edit" to listOf(IconPath("M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"), IconPath("M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z")),
     "trash" to listOf(IconPath("M3 6L5 6L21 6"), IconPath("M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2")),
