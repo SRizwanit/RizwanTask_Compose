@@ -326,13 +326,21 @@ private fun RankItem(r: RankRow, i: Int, meId: String, names: Map<String, String
         Box(Modifier.size(32.dp).clip(CircleShape).background(rkBg), contentAlignment = Alignment.Center) {
             Text(Fmt.bn(i + 1), color = rkFg, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
+        // left block: name (cut with "…" when long) + the fixed "(আপনি)" tag + badges; it takes ALL the free width (weight 1, fill),
+        // so the page count after it is always pushed to the right edge, in the same column on every row
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                names[r.id]?.takeIf { it.isNotEmpty() } ?: "ইউজার",
+                color = cs.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            if (mine) Text("(আপনি)", color = cs.primary, fontWeight = FontWeight.Bold, fontSize = 11.sp, maxLines = 1)
+            BadgeCount(badges)
+        }
+        // right edge: page count, always right-aligned
         Text(
-            (names[r.id]?.takeIf { it.isNotEmpty() } ?: "ইউজার") + (if (mine) " (আপনি)" else ""),
-            color = cs.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false)
+            Fmt.bn(r.n) + " পেইজ", color = cs.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+            maxLines = 1, textAlign = TextAlign.End
         )
-        BadgeCount(badges)
-        Box(Modifier.weight(1f))
-        Text(Fmt.bn(r.n) + " পেইজ", color = cs.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
     }
 }
