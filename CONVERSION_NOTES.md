@@ -440,3 +440,65 @@ PWA install prompt (`Install`), service worker, `runLegacy`, `PageShell` (browse
 - **বিল্ড:** Android SDK ও `kotlinc` নেই, কম্পাইল চালানো যায়নি। Android Studio-তে বিল্ড দিয়ে নিশ্চিত করুন। নতুন বা বদলানো ফাইল: `ViewNetDialog.kt` (নতুন), `ViewScreen.kt` (২ জায়গা), `NetErrorDialog.kt` (১ প্যারামিটার)।
 - **ম্যানুয়াল পরীক্ষা:** (ক) বিমান-মোডে কিতাব খুলুন -> লোডিংয়ের উপর ডায়লগ, back চাপলে Task পেজে ফেরে। (খ) ডায়লগ খোলা থাকতে ইন্টারনেট চালু করে "রিফ্রেশ করুন" -> লোড হয়ে ডায়লগ বন্ধ। (গ) কিতাব খুলে একটি পেইজ দেখে বিমান-মোড চালু করুন, আগে দেখা পেইজে যান -> ডায়লগ আসবে না; যে পেইজ আগে দেখেননি সেখানে গেলে ডায়লগ আসবে। (ঘ) ডায়লগ খোলা অবস্থায় লাল বার দেখা যাবে না।
 
+
+
+## Pagination (20 per page)
+
+- `ui/Pager.kt`: `PAGE_SIZE = 20`, `pageSlice`, `pageCountOf`, `PagerBar` (fully loaded lists) and `PagerBarOpen` (server paged lists). All icons are vectors (`first`, `left`, `right`, `last` in `IconData.kt`), no emoji.
+- Admin: Books, Users, Review (server paged), Payments, Log (server paged), Notices, Dashboard (leaderboard, correction rate, activity report).
+- Task: book grid, payment history, points per book, correction list, leaderboard (podium on page 1).
+- Profile: "কিতাব অনুযায়ী" progress list.
+- A page change scrolls the screen back to the top (`ProvidePagerScroll`); a new search / filter starts again from page 1.
+
+
+---
+
+# Admin আপডেট (update_admin.md — একাধিক GitHub অ্যাকাউন্ট + কিতাব-ভিত্তিক Prompt)
+
+> শর্ত: শুধু ভেক্টর আইকন, ইমোজি নয়, XML নয়। `Default` মানে আগের আচরণ হুবহু বহাল। id সবসময় `String`।
+
+| ধাপ | কাজ | মূল ফাইল |
+|---|---|---|
+| ১-ক | স্কিমা | `rizwantask_full_schema.sql` |
+| ১-খ | মডেল ও `resolve` | `screens/admin/GhAccounts.kt` (নতুন) |
+| ২-ক / ২-খ | Settings: অ্যাকাউন্ট তালিকা, যোগ/এডিট/মুছা | `GhAccountsCard.kt`, `GhAccountDialog.kt` (নতুন), `SettingsTab.kt`, `AdminScreen.kt` |
+| ৩-ক / ৩-খ | GitHub API ও কল-সাইট, টোকেন-চেক | `GitHubApi.kt`, `RunPoller.kt`, `BookDialogs.kt`, `BooksTab.kt`, `GhAccounts.kt` |
+| ৪-ক / ৪-খ | কিতাব এডিটে অ্যাকাউন্ট ফিল্ড, হিন্ট, ইমপোর্ট, কার্ড লেবেল | `BookDialogs.kt`, `BooksTab.kt` |
+| ৫-ক / ৫-খ | কিতাব-ভিত্তিক Prompt ও View | `BookPromptField.kt` (নতুন), `BookDialogs.kt`, `core/ViewConfig.kt` |
+| ৬-ক / ৬-খ | যাচাই ও নোট | `update_admin.md`, `CONVERSION_NOTES.md` |
+
+## ডেটা মডেল
+- `app_settings.gh_accounts` (text/JSON): `[{"id","name","token","username","repo","wf"}, ...]`। খালি/null = শুধু Default। Default = আগের একক `github_token`, `github_username`, `repo_name` ও ফোনে রাখা workflow yml (`wfFile()`), অপরিবর্তিত।
+- `books.gh_account` (text): খালি = Default, নইলে অ্যাকাউন্টের `id`। মুছে ফেলা/অচেনা id = Default।
+- `books.prompt_ocr`, `books.prompt_proof` (text): খালি/null/`Default` = সেটিংসের প্রম্পট।
+- তিনটিই `add column if not exists` — নতুন কলামের জন্য Supabase SQL Editor-এ `rizwantask_full_schema.sql` চালান (idempotent)। কলাম না থাকলে অ্যাপ বাকি ডেটা সংরক্ষণ করে ও SQL হিন্ট দেখায়।
+
+## কোথায় কী ব্যবহার হয় (`GhAccounts.resolve(S, book)`)
+- **টোকেন:** বাছা অ্যাকাউন্টের; Default হলে `github_token`। অ্যাকাউন্ট কখনো Default টোকেনে ফেরে না।
+- **Username / Repo:** কিতাবের নিজস্ব -> অ্যাকাউন্টের -> সেটিংসের -> `SunniPedia/pdftojpg`।
+- **Workflow yml:** অ্যাকাউন্টের; ফাঁকা বা Default হলে `wfFile()`।
+- ব্যবহারকারী: `gh()`, `dispatchBook`, `fetchRunState`, `countPages`, `autoCount`, `RunPoller`, বাল্ক রান, ইমপোর্ট, কিতাব এডিটের "গুনুন" ও টোকেন-চেক, কিতাব কার্ডের রিপো লাইন, View-র `ViewConfig.loadCfg` (repo ও token)।
+- **Prompt (View):** কিতাবের নিজস্ব প্রম্পট আগে; Default/ফাঁকা হলে সেটিংসের।
+
+## UI
+- **Settings:** "GitHub অ্যাকাউন্টসমূহ" কার্ড — Default কার্ড + অতিরিক্ত অ্যাকাউন্ট (মাস্ক করা টোকেন), "যোগ করুন", এডিট, মুছা (নিশ্চিতকরণসহ)। নাম ও টোকেন আবশ্যিক; নাম ইউনিক, "Default" নাম নিষেধ।
+- **কিতাব এডিট:** "GitHub অ্যাকাউন্ট" ড্রপডাউন (অতিরিক্ত অ্যাকাউন্ট থাকলেই দেখায়), "ব্যবহার হবে: অ্যাকাউন্ট • user/repo • yml" হিন্ট, দুটি Prompt ফিল্ড ("Default"/"নিজস্ব" ব্যাজ, "Default করুন", "সেটিংসের প্রম্পট কপি করুন")।
+- **JSON ইমপোর্ট:** "GitHub অ্যাকাউন্ট" ড্রপডাউন — সব ইমপোর্ট করা কিতাবে `gh_account` লেখে।
+
+## যাচাই (৬-ক) ও জানা সীমা
+- কোড পড়ে মিলিয়ে দেখা হয়েছে; Android SDK ও `kotlinc` না থাকায় কম্পাইল/ডিভাইস রান হয়নি — Android Studio-তে বিল্ড দিয়ে নিশ্চিত করুন।
+- ৬-ক-তে একটি বাগ ঠিক হয়েছে: `BookPromptField`-এ "Default" লেখার মাঝে টাইপ/পেস্ট করলে নিজস্ব প্রম্পট হয়ে যেত; `typedOverDefault` এখন শুধু টাইপ করা অংশ রাখে।
+- কিতাবে নিজস্ব Username/Repo থাকলে সেটাই অ্যাকাউন্টের আগে প্রযোজ্য, টোকেন সবসময় অ্যাকাউন্টের।
+- কিতাবের প্রম্পট Default করার পর সেটিংসের প্রম্পটও ফাঁকা থাকলে ইউজারের ফোনে আগে সেভ হওয়া প্রম্পট থেকে যায় (আগের আচরণ)।
+- অ্যাকাউন্টের টোকেন `app_settings` সারিতে থাকে, তাই অ্যাক্সেস `github_token`-এর মতোই (একই RLS)।
+- অ্যাকাউন্ট মুছলে কিতাবে পুরোনো id থেকে যায়, কিন্তু Default হিসেবে চলে।
+
+## ম্যানুয়াল পরীক্ষা (ডিভাইসে)
+1. SQL চালানোর পর পুরোনো কিতাবে এডিট খুলে কিছু না বদলে সংরক্ষণ — সব আগের মতো।
+2. সেটিংসে অ্যাকাউন্ট যোগ -> কিতাব এডিটে বেছে সংরক্ষণ -> "গুনুন", workflow চালু, কার্ডের রিপো লাইন ও View-র ছবি/টোকেন ওই অ্যাকাউন্টের।
+3. অ্যাকাউন্টে টোকেন না থাকলে workflow চালাতে অ্যাকাউন্টের নামসহ ত্রুটি আসে।
+4. অ্যাকাউন্ট মুছুন -> কিতাব Default-এ ফেরে।
+5. কিতাবে নিজস্ব প্রম্পট -> View-তে সেটাই; "Default করুন" -> সেটিংসেরটা।
+6. JSON ইমপোর্টে অ্যাকাউন্ট বেছে ইমপোর্ট -> সব কিতাবে ওই অ্যাকাউন্ট।
+
+**এই টাস্ক (update_admin) সম্পূর্ণ।**

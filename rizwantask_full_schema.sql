@@ -86,6 +86,7 @@ alter table public.app_settings add column if not exists page_rate   numeric not
 alter table public.app_settings add column if not exists min_payout  numeric not null default 50;        -- ন্যূনতম পেমেন্ট রিকোয়েস্ট (৳)
 alter table public.app_settings add column if not exists warn_pct    integer not null default 20;        -- সংশোধনের হার (%) এর বেশি হলে সতর্কতা
 alter table public.app_settings add column if not exists warn_min    integer not null default 5;         -- কমপক্ষে এতগুলো রিভিউ হলে তবেই সতর্কতা
+alter table public.app_settings add column if not exists gh_accounts text;                                 -- অতিরিক্ত GitHub অ্যাকাউন্ট (JSON অ্যারে: [{id,name,token,username,repo,wf}]); খালি/null = শুধু Default (উপরের একক টোকেন/ইউজারনেম/রিপো)
 -- সেটিংস সারি (id=1) না থাকলে তৈরি
 insert into public.app_settings (id, api_enabled)
 select 1, true
@@ -112,6 +113,9 @@ alter table public.books add column if not exists total_pages  integer;         
 alter table public.books add column if not exists hidden       boolean not null default false;   -- লুকানো কিতাব
 alter table public.books add column if not exists gh_run_id    text;                             -- সর্বশেষ GitHub Actions রান আইডি
 alter table public.books add column if not exists gh_run_at    timestamptz;                      -- সর্বশেষ রানের সময়
+alter table public.books add column if not exists gh_account   text;                             -- বেছে নেওয়া GitHub অ্যাকাউন্টের id; খালি/null = Default
+alter table public.books add column if not exists prompt_ocr   text;                             -- এপি আই ১ (OCR) প্রম্পট; খালি/null = Default (সেটিংসের prompt_ocr)
+alter table public.books add column if not exists prompt_proof text;                             -- এপি আই ২ (প্রুফিং) প্রম্পট; খালি/null = Default (সেটিংসের prompt_proof)
 create index if not exists books_created_idx on public.books (created_at desc);
 
 
