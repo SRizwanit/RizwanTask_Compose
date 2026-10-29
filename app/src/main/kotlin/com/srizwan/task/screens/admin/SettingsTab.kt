@@ -77,7 +77,7 @@ private fun numOr(v: String, dflt: Double): Double {
 }
 
 @Composable
-fun SettingsTab(vm: AdminViewModel, openKey: Int) {
+fun SettingsTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
     var f by remember { mutableStateOf(SetForm()) }
     var apiOn by remember { mutableStateOf(true) }
     var apiBusy by remember { mutableStateOf(false) }
@@ -85,6 +85,9 @@ fun SettingsTab(vm: AdminViewModel, openKey: Int) {
     var linkBusy by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var paySaving by remember { mutableStateOf(false) }
+    var accounts by remember { mutableStateOf(emptyList<GhAccount>()) }
+    var ghDlg by remember { mutableStateOf(false) }
+    var ghEdit by remember { mutableStateOf<GhAccount?>(null) }
 
     LaunchedEffect(openKey) {
         if (openKey > 0) {
@@ -92,6 +95,7 @@ fun SettingsTab(vm: AdminViewModel, openKey: Int) {
             f = formOf(r)
             apiOn = r.opt("api_enabled") != false
             linkOn = r.opt("ai_link_enabled") != false
+            accounts = GhAccounts.parse(r)
         }
     }
 
@@ -244,6 +248,26 @@ fun SettingsTab(vm: AdminViewModel, openKey: Int) {
                 Text(if (linkOn) "GitHub লিংক চালু" else "GitHub লিংক বন্ধ", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         }
+
+        // ---- GitHub অ্যাকাউন্টসমূহ (Default + অতিরিক্ত; যোগ/এডিট/মুছা) ----
+        GhAccountsCard(
+            accounts = accounts,
+            defUser = sl(f.gu).ifEmpty { DEF.getValue("github_username") },
+            defRepo = sl(f.repo).ifEmpty { DEF.getValue("repo_name") },
+            defWf = f.wf.trim().ifEmpty { WF_DEF },
+            defTokenSet = f.tok.trim().isNotEmpty(),
+            onAdd = { ghEdit = null; ghDlg = true },
+            onEdit = { ghEdit = it; ghDlg = true },
+            onDelete = { a ->
+                AppScope.scope.launch {
+                    if (ask.confirm("\"${a.label()}\" অ্যাকাউন্ট মুছবেন? এটি বেছে রাখা কিতাবগুলো Default অ্যাকাউন্টে ফিরে যাবে।", "মুছুন")) {
+                        val nl = accounts.filter { it.id != a.id }
+                        if (saveGhAccounts(vm, nl)) { accounts = nl; AppToast.show("অ্যাকাউন্ট মুছে ফেলা হয়েছে") }
+                    }
+                }
+            }
+        )
+        if (ghDlg) GhAccountDialog(vm, accounts, ghEdit, onSaved = { accounts = it; ghDlg = false }, onClose = { ghDlg = false })
 
         // ---- GitHub + Gemini ----
         AppCard {

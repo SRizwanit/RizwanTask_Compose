@@ -34,15 +34,14 @@ import com.srizwan.task.core.enc
 import com.srizwan.task.core.objects
 import com.srizwan.task.core.str
 import com.srizwan.task.nav.Nav
-import com.srizwan.task.ui.BlockButton
+import com.srizwan.task.ui.PAGE_SIZE
+import com.srizwan.task.ui.PagerBarOpen
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-private const val PAGE = 100
-
-/** `busy` / `off` refs of React ReviewTab (not UI state). */
-private class RvLoader { var busy = false; var off = 0 }
+/** `busy` ref of React ReviewTab (not UI state). */
+private class RvLoader { var busy = false }
 
 private fun JSONObject.bookKey(): String = opt("book_id")?.toString() ?: "null"
 private fun JSONObject.userKey(): String = opt("user_id")?.toString() ?: "null"
@@ -57,6 +56,8 @@ fun ReviewTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
     val filter = vm.rvFilter
     var rows by remember { mutableStateOf<List<JSONObject>>(emptyList()) }
     var more by remember { mutableStateOf(false) }
+    // 0-based page (20 rows per page, loaded from the server); a new filter starts again from page 1
+    var page by remember(filter.st, filter.user, filter.book) { mutableStateOf(0) }
     var warn by remember { mutableStateOf("") }
     var sel by remember { mutableStateOf<Set<String>>(emptySet()) }
     var busyKey by remember { mutableStateOf("") }
@@ -66,12 +67,12 @@ fun ReviewTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
 
     fun toast(m: String, bad: Boolean = false) = AppToast.show(m, bad)
 
-    /** Fetches a page of rows for the filter that is current *now* (reset = start over and clear the selection). */
-    suspend fun load(reset: Boolean) {
+    /** Fetches [p] (0-based page) for the filter that is current *now*; PAGE_SIZE + 1 rows are asked for to know whether a next page exists. */
+    suspend fun load(p: Int, clearSel: Boolean = true) {
         if (ld.busy) return
         ld.busy = true
         try {
-            if (reset) { rows = emptyList(); ld.off = 0; sel = emptySet() }
+            if (clearSel) sel = emptySet()
             val f = vm.rvFilter
             var q = ""
             if (f.st.isNotEmpty()) q += "&review_status=eq." + f.st
@@ -80,9 +81,11 @@ fun ReviewTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
             try {
                 val r = Sb.get(
                     "page_proofs?select=book_id,stem,user_id,review_status,review_note,created_at,reviewed_at,rate" + q +
-                        "&order=created_at.desc,book_id.asc,stem.asc&limit=$PAGE&offset=${ld.off}"
+                        "&order=created_at.desc,book_id.asc,stem.asc&limit=${PAGE_SIZE + 1}&offset=${p * PAGE_SIZE}"
                 ).objects()
-                rows = rows + r; ld.off += r.size; more = r.size == PAGE; warn = ""
+                rows = r.take(PAGE_SIZE); more = r.size > PAGE_SIZE; warn = ""
+                // the last row of a later page was handled: step back to the previous page instead of showing an empty one
+                if (rows.isEmpty() && p > 0) page = p - 1
             } catch (e: CancellationException) { throw e } catch (e: Exception) {
                 val m = e.message.orEmpty()
                 warn = if (Regex("review_status|created_at|42703|PGRST", RegexOption.IGNORE_CASE).containsMatchIn(m)) "রিভিউ কলাম নেই — $SQLHINT।" else m
@@ -90,8 +93,8 @@ fun ReviewTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
         } finally { ld.busy = false }
     }
 
-    // Opening the tab or changing a filter reloads from the start (old onchange -> loadReview(true)).
-    LaunchedEffect(openKey, filter.st, filter.user, filter.book) { if (openKey > 0) load(true) }
+    // Opening the tab, changing a filter or turning the page loads that page (old onchange -> loadReview).
+    LaunchedEffect(openKey, filter.st, filter.user, filter.book, page) { if (openKey > 0) load(page) }
 
     /** When a user's mistake rate is over the limit: a warning notice (at most once per 12 hours). */
     suspend fun maybeWarn(uids: List<String>) {
@@ -161,6 +164,7 @@ fun ReviewTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                     val note = ask.ask(title = "সংশোধন দরকার", label = "ইউজারের জন্য নোট — কী ঠিক করতে হবে (ঐচ্ছিক)", ok = "চিহ্নিত করুন") ?: return@launch
                     setReview(listOf(r), "correction", note); toast("সংশোধন দরকার চিহ্নিত হয়েছে")
                 }
+                load(page, clearSel = false)   // refill the page to 20 rows
             } catch (e: CancellationException) { throw e } catch (e: Exception) { toast(e.message.orEmpty(), true) } finally { busyKey = "" }
         }
     }
@@ -182,6 +186,7 @@ fun ReviewTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
             if (!ask.confirm(Fmt.bn(items.size) + "টি পেইজ অনুমোদন করবেন?")) return@launch
             try {
                 setReview(items, "approved"); toast(Fmt.bn(items.size) + "টি পেইজ অনুমোদিত")
+                load(page, clearSel = false)   // refill the page to 20 rows
             } catch (e: CancellationException) { throw e } catch (e: Exception) { toast(e.message.orEmpty(), true) }
         }
     }
@@ -214,7 +219,7 @@ fun ReviewTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                 vm.applyStatus(m.map { rvKey(it) }.toSet(), "approved", null)
                 ActivityLog.log("admin_approve", Fmt.bn(m.size) + " পেইজ (একসাথে) • " + (if (u.isNotEmpty()) vm.uname(u) else "সব ইউজার"))
                 toast(Fmt.bn(m.size) + "টি পেইজ অনুমোদিত হয়েছে")
-                load(true)
+                if (page != 0) page = 0 else load(0)
             } catch (e: CancellationException) { throw e } catch (e: Exception) { toast(e.message.orEmpty(), true) } finally { okAllBusy = false }
         }
     }
@@ -243,8 +248,8 @@ fun ReviewTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                 listOf("" to "সব কিতাব") + vm.books.map { it.idStr() to it.str("name").orEmpty() },
                 onPick = { vm.updateRvFilter(filter.copy(book = it)) }, modifier = w
             )
-            Badge(Fmt.bn(rows.size) + (if (more) "+" else "") + " টি")
-            SmBtn("", "refresh") { AppScope.scope.launch { load(true) } }
+            Badge("পেইজ ${Fmt.bn(page + 1)} • ${Fmt.bn(rows.size)}টি")
+            SmBtn("", "refresh") { AppScope.scope.launch { load(page) } }
         }
 
         FlowRow(
@@ -296,6 +301,6 @@ fun ReviewTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                 }
             }
         }
-        if (more) BlockButton("আরও দেখান", onClick = { AppScope.scope.launch { load(false) } }, modifier = Modifier.padding(top = 2.dp))
+        PagerBarOpen(page = page, hasNext = more, onPage = { page = it })
     }
 }

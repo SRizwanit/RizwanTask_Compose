@@ -34,7 +34,9 @@ import com.srizwan.task.ui.AppField
 import com.srizwan.task.ui.FieldLabel
 import com.srizwan.task.ui.HintText
 import com.srizwan.task.ui.ErrText
+import com.srizwan.task.ui.PagerBar
 import com.srizwan.task.ui.PrimaryButton
+import com.srizwan.task.ui.pageSlice
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -54,7 +56,7 @@ fun NoticeTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
 
     suspend fun load() {
         try {
-            list = Sb.get("notices?order=created_at.desc&limit=60").objects(); listErr = ""
+            list = Sb.get("notices?order=created_at.desc&limit=200").objects(); listErr = ""
         } catch (e: CancellationException) { throw e } catch (e: Exception) {
             list = null
             listErr = if (noTbl(e)) "notices টেবিল নেই — $SQLHINT" else e.message.orEmpty()
@@ -126,11 +128,12 @@ fun NoticeTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
         )
         val l = list
+        var page by remember { mutableStateOf(0) }
         when {
             listErr.isNotEmpty() -> NoticeBox(listErr)
             l == null -> {}
             l.isEmpty() -> Empty("এখনো কোনো নোটিশ পাঠানো হয়নি")
-            else -> l.forEach { n ->
+            else -> l.pageSlice(page).forEach { n ->
                 val uid = n.str("user_id")?.takeIf { it.isNotEmpty() }
                 LiCard {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -149,5 +152,6 @@ fun NoticeTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                 }
             }
         }
+        if (l != null && l.isNotEmpty()) PagerBar(page = page, total = l.size, onPage = { page = it })
     }
 }

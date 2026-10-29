@@ -113,7 +113,7 @@ class DashState(private val vm: AdminViewModel) {
         )
     }
 
-    /** Leaderboard, top 15; pages needing correction are not counted (React `lb`). */
+    /** Leaderboard (everybody with at least one page, best first; the tab shows 20 per page); pages needing correction are not counted (React `lb`). */
     val lb: List<LbRow> by derivedStateOf {
         val since = when (dP) { "day" -> t0(); "week" -> d7(); else -> 0L }
         val m = LinkedHashMap<String, Int>()
@@ -123,7 +123,7 @@ class DashState(private val vm: AdminViewModel) {
             val k = p.opt("user_id")?.toString() ?: "null"
             m[k] = (m[k] ?: 0) + 1
         }
-        m.entries.sortedByDescending { it.value }.take(15).map { LbRow(it.key, it.value) }
+        m.entries.sortedByDescending { it.value }.map { LbRow(it.key, it.value) }
     }
 
     /** Activity report (React `activity`). */

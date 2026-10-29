@@ -77,6 +77,8 @@ private fun fromBook(b: JSONObject) = BookForm(
 )
 
 private val PG = Regex("page_rate|total_pages", RegexOption.IGNORE_CASE)
+private val GH_ACC = Regex("gh_account", RegexOption.IGNORE_CASE)
+private val NEW_COLS = Regex("gh_account|prompt_ocr|prompt_proof", RegexOption.IGNORE_CASE)
 
 @Composable
 private fun Lbl(text: String) {
@@ -105,11 +107,20 @@ fun BookDialog(vm: AdminViewModel, book: JSONObject?, onClose: () -> Unit) {
     var wantRunUi by remember { mutableStateOf(book == null) }
     var splitUi by remember { mutableStateOf(false) }
     val none = remember { JSONObject() }
+    // GitHub account of this book (books.gh_account; "" = Default). Kept outside BookForm so editing other fields never resets it.
+    val accounts = remember { GhAccounts.parse(S) }
+    val accOrig = remember { book?.str("gh_account").orEmpty().takeIf { id -> accounts.any { it.id == id } }.orEmpty() }   // a deleted account counts as Default
+    var accId by remember { mutableStateOf(accOrig) }
+    // per-book prompts (books.prompt_ocr / prompt_proof): "Default" = the Settings prompt
+    val p1Orig = remember { promptShown(book?.str("prompt_ocr")) }
+    val p2Orig = remember { promptShown(book?.str("prompt_proof")) }
+    var p1 by remember { mutableStateOf(p1Orig) }
+    var p2 by remember { mutableStateOf(p2Orig) }
 
     /** "গুনুন": counts the images in the GitHub folder (for the form's current name / folder / repo) into the page-count field. */
     fun formCount() {
         fCounting = true; err = ""
-        val bk = jsonOf("name" to fm.name.trim(), "folder" to fm.fold.trim(), "github_username" to fm.gu.trim(), "repo_name" to fm.repo.trim(), "branch" to fm.br.trim())
+        val bk = jsonOf("name" to fm.name.trim(), "folder" to fm.fold.trim(), "github_username" to fm.gu.trim(), "repo_name" to fm.repo.trim(), "branch" to fm.br.trim(), "gh_account" to accId.ifEmpty { null })
         AppScope.scope.launch {
             try {
                 if (bk.getString("name").isEmpty()) throw Exception("আগে কিতাবের নাম দিন")
@@ -127,6 +138,11 @@ fun BookDialog(vm: AdminViewModel, book: JSONObject?, onClose: () -> Unit) {
             "github_username" to fm.gu.trim(), "repo_name" to fm.repo.trim(), "branch" to fm.br.trim(),
             "folder" to fm.fold.trim().trim('/')
         )
+        // only written when it changed, so a database without the gh_account column keeps working for Default books
+        if (accId != accOrig) row.put("gh_account", if (accId.isEmpty()) JSONObject.NULL else accId)
+        // prompts: written only when changed (a database without the columns keeps working); Default / blank = null
+        if (promptToSave(p1) != promptToSave(p1Orig)) row.put("prompt_ocr", promptToSave(p1) ?: JSONObject.NULL)
+        if (promptToSave(p2) != promptToSave(p2Orig)) row.put("prompt_proof", promptToSave(p2) ?: JSONObject.NULL)
         if (row.getString("name").isEmpty()) { err = "কিতাবের নাম আবশ্যক"; return }
         val rv = fm.rate.trim(); val tv = fm.tot.trim()
         val rn = rv.toDoubleOrNull()
@@ -141,7 +157,9 @@ fun BookDialog(vm: AdminViewModel, book: JSONObject?, onClose: () -> Unit) {
             val pu = row.getString("pdf_url")
             if (pu.isEmpty()) { err = "ছবি তৈরির জন্য পিডিএফ লিংক দিন"; return }
             if (pdfLinks(pu).size > 1) { err = "একটি কিতাবে একটাই পিডিএফ লিংক দিন"; return }
-            if (ghTok(S).isEmpty()) { err = "workflow চালাতে সেটিংস ট্যাবে GitHub Token দিন"; return }
+            // the book's chosen GitHub account decides which token is needed (saved book + the form values on top)
+            val chk = JSONObject((vm.books.firstOrNull { it.idStr() == editId } ?: JSONObject()).toString()).also { m -> row.keys().forEach { k -> m.put(k, row.opt(k)) } }
+            if (ghTok(S, chk).isEmpty()) { err = GhAccounts.noTokenMsg(S, chk); return }
         }
         setSplitPref(split)
         err = ""; saving = true
@@ -153,10 +171,14 @@ fun BookDialog(vm: AdminViewModel, book: JSONObject?, onClose: () -> Unit) {
                 try {
                     saved = persist(row).optJSONObject(0)
                 } catch (e: CancellationException) { throw e } catch (e: Exception) {
-                    if (PG.containsMatchIn(e.message.orEmpty())) {
-                        val rest = JSONObject(row.toString()); rest.remove("page_rate"); rest.remove("total_pages")
+                    val em = e.message.orEmpty()
+                    if (PG.containsMatchIn(em) || NEW_COLS.containsMatchIn(em)) {
+                        val rest = JSONObject(row.toString())
+                        val oldPg = PG.containsMatchIn(em)
+                        if (oldPg) { rest.remove("page_rate"); rest.remove("total_pages") }
+                        rest.remove("gh_account"); rest.remove("prompt_ocr"); rest.remove("prompt_proof")
                         saved = persist(rest).optJSONObject(0)
-                        AppToast.show("কিতাব সংরক্ষিত, কিন্তু রেট/মোট পেইজ সংরক্ষণ হয়নি — $SQLHINT", true)
+                        AppToast.show("কিতাব সংরক্ষিত, কিন্তু " + (if (oldPg) "রেট/মোট পেইজ/GitHub অ্যাকাউন্ট/Prompt" else "GitHub অ্যাকাউন্ট/Prompt") + " সংরক্ষণ হয়নি — $SQLHINT", true)
                     } else throw e
                 }
                 if (editId != null) {
@@ -203,13 +225,21 @@ fun BookDialog(vm: AdminViewModel, book: JSONObject?, onClose: () -> Unit) {
                     AppField(fm.tot, { fm = BookForm(fm.name, fm.author, fm.cover, fm.pdf, fm.rate, it, fm.gu, fm.repo, fm.br, fm.fold) }, modifier = Modifier.weight(1f), keyboardType = KeyboardType.Number)
                     SmBtn("গুনুন", enabled = !fCounting) { formCount() }
                 }
-                Lbl("GitHub Username (ফাঁকা = ডিফল্ট)")
-                AppField(fm.gu, { fm = BookForm(fm.name, fm.author, fm.cover, fm.pdf, fm.rate, fm.tot, it, fm.repo, fm.br, fm.fold) }, placeholder = eff(S, none, "github_username"))
-                Lbl("Repo Name (ফাঁকা = ডিফল্ট)")
-                AppField(fm.repo, { fm = BookForm(fm.name, fm.author, fm.cover, fm.pdf, fm.rate, fm.tot, fm.gu, it, fm.br, fm.fold) }, placeholder = eff(S, none, "repo_name"))
+                if (accounts.isNotEmpty() || accId.isNotEmpty()) {
+                    Lbl("GitHub অ্যাকাউন্ট (টোকেন / workflow)")
+                    AdminSelect(accId, listOf("" to GhAccounts.DEFAULT_LABEL) + accounts.map { it.id to it.label() }, onPick = { accId = it })
+                }
+                // what this form resolves to: the chosen account (or Default) + the book's own Username / Repo on top
+                val rAcc = GhAccounts.resolve(S, jsonOf("gh_account" to accId.ifEmpty { null }))
+                val fBook = jsonOf("github_username" to fm.gu.trim(), "repo_name" to fm.repo.trim(), "gh_account" to accId.ifEmpty { null })
+                val rForm = GhAccounts.resolve(S, fBook)
+                Lbl("GitHub Username (ফাঁকা = ${rAcc.account?.label() ?: "ডিফল্ট"})")
+                AppField(fm.gu, { fm = BookForm(fm.name, fm.author, fm.cover, fm.pdf, fm.rate, fm.tot, it, fm.repo, fm.br, fm.fold) }, placeholder = rAcc.username)
+                Lbl("Repo Name (ফাঁকা = ${rAcc.account?.label() ?: "ডিফল্ট"})")
+                AppField(fm.repo, { fm = BookForm(fm.name, fm.author, fm.cover, fm.pdf, fm.rate, fm.tot, fm.gu, it, fm.br, fm.fold) }, placeholder = rAcc.repo)
                 Lbl("Branch (ফাঁকা = ডিফল্ট)")
                 AppField(fm.br, { fm = BookForm(fm.name, fm.author, fm.cover, fm.pdf, fm.rate, fm.tot, fm.gu, fm.repo, it, fm.fold) }, placeholder = "main")
-                HintText("ডিফল্ট: ${eff(S, none, "github_username")} / ${eff(S, none, "repo_name")} (সেটিংস ট্যাব থেকে বদলানো যায়)")
+                HintText("ব্যবহার হবে: ${GhAccounts.describe(S, fBook)} (অ্যাকাউন্ট ও ডিফল্ট সেটিংস ট্যাব থেকে বদলানো যায়)")
                 Lbl("রিপোর ফোল্ডার প্রিফিক্স")
                 AppField(fm.fold, { fm = BookForm(fm.name, fm.author, fm.cover, fm.pdf, fm.rate, fm.tot, fm.gu, fm.repo, fm.br, it) }, placeholder = "যেমন: bukhari (ফাঁকা থাকলে কিতাবের নাম)")
                 Text(
@@ -223,12 +253,15 @@ fun BookDialog(vm: AdminViewModel, book: JSONObject?, onClose: () -> Unit) {
                     },
                     color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, lineHeight = 18.sp
                 )
+                BookPromptField("Prompt - এপি আই ১ (ছবি থেকে টেক্সট / OCR)", p1, settingsPrompt(S, 1)) { p1 = it }
+                BookPromptField("Prompt - এপি আই ২ (টেক্সট প্রুফিং)", p2, settingsPrompt(S, 2)) { p2 = it }
+                HintText("Default (বা ফাঁকা) থাকলে সেটিংস ট্যাবের প্রম্পট ব্যবহার হবে। নিজের প্রম্পট লিখলে শুধু এই কিতাবের View পেইজে সেটা ব্যবহার হবে।")
                 ChkRow(wantRunUi, { wantRunUi = it }, "সংরক্ষণের পর পিডিএফ থেকে ছবি তৈরির workflow চালান")
                 ChkRow(splitUi, { splitUi = it }, "প্রতিটি পেইজ বাম-ডান দুই ভাগ (split) করুন")
                 val nm = sl(fm.fold).ifEmpty { sl(fm.name) }
                 HintText(
-                    if (nm.isNotEmpty()) "আউটপুট ফোল্ডার: ${nm}_${S.str("pages_dir")?.takeIf { it.isNotEmpty() } ?: DEF.getValue("pages_dir")} • workflow: ${wfFile()}"
-                    else "workflow: ${wfFile()}"
+                    if (nm.isNotEmpty()) "আউটপুট ফোল্ডার: ${nm}_${S.str("pages_dir")?.takeIf { it.isNotEmpty() } ?: DEF.getValue("pages_dir")} • workflow: ${rForm.wf}"
+                    else "workflow: ${rForm.wf}"
                 )
                 HintText("নতুন কিতাব Task পেইজে তখনই দেখাবে, যখন ছবি তৈরি শেষ হয়ে মোট পেইজ গণনা সম্পন্ন হবে।")
                 if (err.isNotEmpty()) ErrText(err)
@@ -312,6 +345,7 @@ private suspend fun postBatch(chunk: List<JSONObject>): JSONArray {
     try {
         return Sb.post("books", JSONArray(chunk))
     } catch (e: CancellationException) { throw e } catch (e: Exception) {
+        if (GH_ACC.containsMatchIn(e.message.orEmpty())) throw Exception("gh_account কলাম নেই — $SQLHINT")
         if (PG.containsMatchIn(e.message.orEmpty())) {                          // old schema: no rate / pages columns
             return Sb.post("books", JSONArray(chunk.map { r -> JSONObject(r.toString()).also { it.remove("page_rate"); it.remove("total_pages") } }))
         }
@@ -347,6 +381,8 @@ fun ImportDialog(vm: AdminViewModel, ask: AskController, onClose: () -> Unit) {
     var impCount by remember { mutableStateOf(true) }
     var impRun by remember { mutableStateOf(false) }      // React impRun: workflow for every imported book
     var impSplit by remember { mutableStateOf(false) }    // React impSplit: left-right split
+    val accounts = remember { GhAccounts.parse(vm.S) }
+    var impAcc by remember { mutableStateOf("") }          // GitHub account for every imported book ("" = Default)
 
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
@@ -369,7 +405,8 @@ fun ImportDialog(vm: AdminViewModel, ask: AskController, onClose: () -> Unit) {
         val src = rows
         AppScope.scope.launch {
             if (wantRun) {
-                if (ghTok(vm.S).isEmpty()) { err = "workflow চালাতে সেটিংস ট্যাবে GitHub Token দিন"; return@launch }
+                val accB = jsonOf("gh_account" to impAcc.ifEmpty { null })
+                if (ghTok(vm.S, accB).isEmpty()) { err = GhAccounts.noTokenMsg(vm.S, accB); return@launch }
                 val n = src.count { !it.str("pdf_url").isNullOrEmpty() }
                 if (!ask.confirm("${Fmt.bn(n)}টি কিতাবের জন্য আলাদা workflow চালু হবে। এটি ভারী হতে পারে। নিশ্চিত?")) return@launch
             }
@@ -380,7 +417,9 @@ fun ImportDialog(vm: AdminViewModel, ask: AskController, onClose: () -> Unit) {
                 if (!r.str("pdf_url").isNullOrEmpty()) JSONObject(r.toString()).also { it.remove("total_pages") } else r
             } else src
             // keep the file order: first row = newest, so the lists show 1, 2, 3 … in sequence
-            val toSave = com.srizwan.task.core.BookOrder.stampInFileOrder(toSave0)
+            // the chosen GitHub account is saved on every imported book (Default = nothing written)
+            val toSave1 = if (impAcc.isNotEmpty()) toSave0.map { r -> JSONObject(r.toString()).put("gh_account", impAcc) } else toSave0
+            val toSave = com.srizwan.task.core.BookOrder.stampInFileOrder(toSave1)
             var added = 0
             try {
                 var i = 0
@@ -452,6 +491,10 @@ fun ImportDialog(vm: AdminViewModel, ask: AskController, onClose: () -> Unit) {
                     )
                 }
                 ChkRow(impCount, { impCount = it }, "ইমপোর্টের পর স্বয়ংক্রিয়ভাবে মোট পেইজ গুনুন (GitHub ফোল্ডারে ছবি থাকলে)", enabled = !busy)
+                if (accounts.isNotEmpty()) {
+                    Lbl("GitHub অ্যাকাউন্ট (ইমপোর্ট করা সব কিতাবের জন্য)")
+                    AdminSelect(impAcc, listOf("" to GhAccounts.DEFAULT_LABEL) + accounts.map { it.id to it.label() }, onPick = { impAcc = it })
+                }
                 ChkRow(impRun, { impRun = it }, "ইমপোর্টের পর প্রতিটি কিতাবের জন্য পিডিএফ থেকে ছবি তৈরির workflow চালান (ভারী — সাবধানে)", enabled = !busy)
                 if (impRun) ChkRow(impSplit, { impSplit = it }, "প্রতিটি পেইজ বাম-ডান দুই ভাগ (split) করুন", enabled = !busy)
                 if (prog.isNotEmpty()) HintText(prog)

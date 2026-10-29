@@ -40,6 +40,8 @@ import com.srizwan.task.core.jsonOf
 import com.srizwan.task.core.str
 import com.srizwan.task.ui.AppField
 import com.srizwan.task.ui.BlockButton
+import com.srizwan.task.ui.PagerBar
+import com.srizwan.task.ui.pageSlice
 import com.srizwan.task.ui.errColor
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -130,6 +132,8 @@ fun UsersTab(vm: AdminViewModel, me: AppUser, ask: AskController, openKey: Int) 
     val list = vm.users.filter {
         ql.isEmpty() || it.str("full_name").orEmpty().lowercase().contains(ql) || it.str("phone").orEmpty().contains(ql)
     }
+    // pagination: 20 users per page; a new search starts again from page 1
+    var page by remember(ql) { mutableStateOf(0) }
 
     /** Runs a server write on the app scope (so a tab switch does not cancel it); errors become a toast via [mapErr]. */
     fun serverCall(mapErr: (String?) -> String = { it.orEmpty() }, block: suspend () -> Unit) {
@@ -186,7 +190,7 @@ fun UsersTab(vm: AdminViewModel, me: AppUser, ask: AskController, openKey: Int) 
 
         if (list.isEmpty()) Empty("কোনো ইউজার নেই")
 
-        list.forEach { u ->
+        list.pageSlice(page).forEach { u ->
             val id = u.idStr()
             val bound = !Device.isEmpty(u.str("device_id"))
             val self = id == me.id
@@ -229,6 +233,7 @@ fun UsersTab(vm: AdminViewModel, me: AppUser, ask: AskController, openKey: Int) 
                 }
             }
         }
+        PagerBar(page = page, total = list.size, onPage = { page = it })
     }
 
     PinDialog(pinTarget, onClose = { pinTarget = null }, onDone = { scope.launch { vm.loadUsers() } })

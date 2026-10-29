@@ -84,22 +84,26 @@ fun AdminScreen(vm: AdminViewModel = viewModel()) {
                 Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.TopCenter) {
                     // key(tab): a fresh scroll position and fresh tab state each time a tab is opened (React openKey).
                     androidx.compose.runtime.key(vm.tab) {
-                        Column(
-                            Modifier.widthIn(max = 980.dp).fillMaxSize()
-                                .verticalScroll(rememberScrollState())
-                                .padding(start = 14.dp, end = 14.dp, bottom = 24.dp)
-                        ) {
-                            val u = me
-                            when {
-                                vm.tab == "Dash" -> DashTab(vm, ask, vm.openKey("Dash"), onReviewUser = { vm.reviewUser(it, true) })
-                                vm.tab == "Users" && u != null -> UsersTab(vm, u, ask, vm.openKey("Users"))
-                                vm.tab == "Set" -> SettingsTab(vm, vm.openKey("Set"))
-                                vm.tab == "Notice" -> NoticeTab(vm, ask, vm.openKey("Notice"))
-                                vm.tab == "Log" -> LogTab(vm, vm.openKey("Log"))
-                                vm.tab == "Pay" -> PayTab(vm, ask, vm.openKey("Pay"))
-                                vm.tab == "Review" -> ReviewTab(vm, ask, vm.openKey("Review"))
-                                vm.tab == "Books" -> BooksTab(vm, ask, vm.openKey("Books"))
-                                else -> TabContent(vm, vm.tab)
+                        // The page bars (20 rows per page) scroll this column back to the top when the page changes.
+                        val tabScroll = rememberScrollState()
+                        com.srizwan.task.ui.ProvidePagerScroll(tabScroll) {
+                            Column(
+                                Modifier.widthIn(max = 980.dp).fillMaxSize()
+                                    .verticalScroll(tabScroll)
+                                    .padding(start = 14.dp, end = 14.dp, bottom = 24.dp)
+                            ) {
+                                val u = me
+                                when {
+                                    vm.tab == "Dash" -> DashTab(vm, ask, vm.openKey("Dash"), onReviewUser = { vm.reviewUser(it, true) })
+                                    vm.tab == "Users" && u != null -> UsersTab(vm, u, ask, vm.openKey("Users"))
+                                    vm.tab == "Set" -> SettingsTab(vm, ask, vm.openKey("Set"))
+                                    vm.tab == "Notice" -> NoticeTab(vm, ask, vm.openKey("Notice"))
+                                    vm.tab == "Log" -> LogTab(vm, vm.openKey("Log"))
+                                    vm.tab == "Pay" -> PayTab(vm, ask, vm.openKey("Pay"))
+                                    vm.tab == "Review" -> ReviewTab(vm, ask, vm.openKey("Review"))
+                                    vm.tab == "Books" -> BooksTab(vm, ask, vm.openKey("Books"))
+                                    else -> TabContent(vm, vm.tab)
+                                }
                             }
                         }
                     }

@@ -35,7 +35,9 @@ import com.srizwan.task.core.enc
 import com.srizwan.task.core.finiteNum
 import com.srizwan.task.core.jsonOf
 import com.srizwan.task.core.str
+import com.srizwan.task.ui.PagerBar
 import com.srizwan.task.ui.Spinner
+import com.srizwan.task.ui.pageSlice
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -56,6 +58,8 @@ fun PayTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
     val pyF = vm.payFilter
     var loading by remember { mutableStateOf(false) }
     var busyId by remember { mutableStateOf("") }
+    // pagination: 20 payment requests per page; a new status filter starts again from page 1
+    var page by remember(pyF) { mutableStateOf(0) }
     val cs = MaterialTheme.colorScheme
 
     // Opening the tab re-fetches payments and proofs (React openKey effect: Promise.all([loadPaysQuiet(), loadProofs(true)])).
@@ -169,7 +173,7 @@ fun PayTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
         } else if (list.isEmpty()) {
             Empty("কোনো পেমেন্ট নেই", art = "wallet")
         } else {
-            list.forEach { x ->
+            list.pageSlice(page).forEach { x ->
                 val id = x.idStr()
                 val stat = x.str("status")
                 val st = when (stat) {
@@ -221,6 +225,7 @@ fun PayTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                     }
                 }
             }
+            PagerBar(page = page, total = list.size, onPage = { page = it })
         }
     }
 }

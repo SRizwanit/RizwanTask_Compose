@@ -29,7 +29,11 @@ import kotlin.coroutines.resumeWithException
  * 2-ঝ-১ uses [countPages] / [autoCount]; [dispatchBook], [fetchRunState] and [isActiveRun] are used by the run UI in 2-ঝ-২.
  */
 
+/** Default token only (settings `github_token`). For a book use [ghTok] with `b` — it follows the book's chosen GitHub account. */
 fun ghTok(S: JSONObject): String = (S.str("github_token") ?: "").trim()
+
+/** Token for book `b`: its chosen GitHub account's token, or the Default token (update_admin.md 3-ক). */
+fun ghTok(S: JSONObject, b: JSONObject?): String = GhAccounts.resolve(S, b).token
 fun pdfLinks(u: String?): List<String> = (u ?: "").split(Regex("[,\\s]+")).filter { it.isNotEmpty() }
 
 /** fetch() Response replacement: status code + body text. */
@@ -51,12 +55,13 @@ private suspend fun Call.awaitResp(): Response = suspendCancellableCoroutine { c
 
 /** `gh(S, b, path, opt)` — https://api.github.com/repos/<user>/<repo><path>. */
 suspend fun gh(S: JSONObject, b: JSONObject, path: String, method: String = "GET", body: JSONObject? = null): GhResp {
-    val repo = eff(S, b, "github_username") + "/" + eff(S, b, "repo_name")
+    val g = GhAccounts.resolve(S, b)   // token / user / repo of the book's chosen account (Default when none)
+    val repo = g.username + "/" + g.repo
     val rb = Request.Builder().url("https://api.github.com/repos/$repo$path")
         .header("Cache-Control", "no-store")
         .header("Accept", "application/vnd.github+json")
         .header("X-GitHub-Api-Version", "2022-11-28")
-    if (ghTok(S).isNotEmpty()) rb.header("Authorization", "Bearer " + ghTok(S))
+    if (g.token.isNotEmpty()) rb.header("Authorization", "Bearer " + g.token)
     rb.method(method, body?.toString()?.toRequestBody("application/json".toMediaType()))
     try {
         return ghClient.newCall(rb.build()).awaitResp().use { r -> withContext(Dispatchers.IO) { GhResp(r.code, r.body?.string().orEmpty()) } }
@@ -98,14 +103,18 @@ class RunState(
 
 /** Starts the image-creation workflow for a book (needs the GitHub token and exactly one PDF link). */
 suspend fun dispatchBook(S: JSONObject, b: JSONObject, split: Boolean): RunInfo {
-    if (ghTok(S).isEmpty()) throw Exception("GitHub Token দেওয়া নেই — সেটিংস ট্যাবে টোকেন দিন")
+    val g = GhAccounts.resolve(S, b)
+    if (g.token.isEmpty()) throw Exception(
+        if (g.account != null) "\"${g.account.label()}\" অ্যাকাউন্টে GitHub Token দেওয়া নেই — সেটিংস ট্যাবে টোকেন দিন"
+        else "GitHub Token দেওয়া নেই — সেটিংস ট্যাবে টোকেন দিন"
+    )
     val links = pdfLinks(b.str("pdf_url"))
     if (links.isEmpty()) throw Exception("পিডিএফ লিংক দিন")
     if (links.size > 1) throw Exception("একটি কিতাবে একটাই পিডিএফ লিংক দিন")
     val ref = branchOf(S, b)
     val at = Instant.now().toString()
     val r = gh(
-        S, b, "/actions/workflows/" + enc(wfFile()) + "/dispatches", "POST",
+        S, b, "/actions/workflows/" + enc(g.wf) + "/dispatches", "POST",
         jsonOf(
             "ref" to ref, "return_run_details" to true,
             "inputs" to jsonOf(
@@ -134,7 +143,7 @@ suspend fun dispatchBook(S: JSONObject, b: JSONObject, split: Boolean): RunInfo 
 suspend fun fetchRunState(S: JSONObject, b: JSONObject, info: RunInfo, onId: (String) -> Unit): RunState {
     var id = info.id
     if (id == null) {
-        val r = gh(S, b, "/actions/workflows/" + enc(wfFile()) + "/runs?event=workflow_dispatch&per_page=15")
+        val r = gh(S, b, "/actions/workflows/" + enc(GhAccounts.resolve(S, b).wf) + "/runs?event=workflow_dispatch&per_page=15")
         if (!r.ok) throw Exception(ghErr(r))
         val t = (Fmt.parseInstant(info.at)?.toEpochMilli() ?: 0L) - 60000
         val arr = r.json().optJSONArray("workflow_runs")

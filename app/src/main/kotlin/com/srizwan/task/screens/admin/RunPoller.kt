@@ -46,7 +46,7 @@ class RunPoller(private val vm: AdminViewModel, private val scope: CoroutineScop
 
     private suspend fun poll() {
         val s0 = vm.S
-        if (!visible || vm.tab != "Books" || ghTok(s0).isEmpty()) { schedule(8000); return }
+        if (!visible || vm.tab != "Books" || vm.books.none { ghTok(s0, it).isNotEmpty() }) { schedule(8000); return }
         var any = false
         try {
             coroutineScope {
@@ -63,6 +63,7 @@ class RunPoller(private val vm: AdminViewModel, private val scope: CoroutineScop
     /** One book. Returns true when its run is (still) active. */
     private suspend fun pollOne(s0: org.json.JSONObject, b: org.json.JSONObject): Boolean {
         val info = RunStore.getRun(b) ?: return false
+        if (ghTok(s0, b).isEmpty()) return false          // this book's GitHub account has no token (same as before: nothing is polled)
         val id = b.idStr()
         val old = RunStore.stateOf(id)
         if (old != null && old.status == "completed") return false          // finished runs are not fetched again

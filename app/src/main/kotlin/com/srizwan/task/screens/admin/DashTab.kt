@@ -18,6 +18,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +34,10 @@ import com.srizwan.task.core.AppScope
 import com.srizwan.task.core.Fmt
 import com.srizwan.task.core.str
 import com.srizwan.task.ui.AppCard
+import com.srizwan.task.ui.PAGE_SIZE
+import com.srizwan.task.ui.PagerBar
+import com.srizwan.task.ui.pageCountOf
+import com.srizwan.task.ui.pageSlice
 import com.srizwan.task.ui.Spinner
 import com.srizwan.task.ui.errColor
 import com.srizwan.task.ui.okColor
@@ -47,6 +55,10 @@ import kotlinx.coroutines.launch
 fun DashTab(vm: AdminViewModel, ask: AskController, openKey: Int, onReviewUser: (String) -> Unit) {
     val cs = MaterialTheme.colorScheme
     val d = vm.dash
+    // pagination: each of the three lists shows 20 rows per page; a new period / filter starts again from page 1
+    var lbPage by remember(d.dP) { mutableStateOf(0) }
+    var corrPage by remember(d.crF) { mutableStateOf(0) }
+    var actPage by remember(d.rF) { mutableStateOf(0) }
 
     // React: useEffect(load, [openKey]) — every open of the tab reloads the data.
     LaunchedEffect(openKey) { d.load() }
@@ -82,7 +94,10 @@ fun DashTab(vm: AdminViewModel, ask: AskController, openKey: Int, onReviewUser: 
         if (lb.isEmpty()) {
             Empty("এই সময়ে কোনো প্রুফড পেইজ নেই", pad = true)
         } else {
-            lb.forEachIndexed { i, r -> LbRowView(i, vm.uname(r.uid), r.n) }
+            // the rank number stays global (page 2 starts at 21)
+            val lbStart = lbPage.coerceIn(0, pageCountOf(lb.size) - 1) * PAGE_SIZE
+            lb.pageSlice(lbPage).forEachIndexed { i, r -> LbRowView(lbStart + i, vm.uname(r.uid), r.n) }
+            PagerBar(page = lbPage, total = lb.size, onPage = { lbPage = it })
         }
     }
 
@@ -104,7 +119,7 @@ fun DashTab(vm: AdminViewModel, ask: AskController, openKey: Int, onReviewUser: 
         if (corr.isEmpty()) {
             Empty("এই ফিল্টারে কোনো ইউজার নেই", pad = true)
         } else {
-            corr.take(40).forEach { r ->
+            corr.pageSlice(corrPage).forEach { r ->
                 val uid = r.u.idStr()
                 val hi = d.high(r)
                 val pcColor: Color = when {
@@ -145,6 +160,7 @@ fun DashTab(vm: AdminViewModel, ask: AskController, openKey: Int, onReviewUser: 
                     }
                 }
             }
+            PagerBar(page = corrPage, total = corr.size, onPage = { corrPage = it })
         }
     }
 
@@ -158,7 +174,8 @@ fun DashTab(vm: AdminViewModel, ask: AskController, openKey: Int, onReviewUser: 
         if (act.isEmpty()) {
             Empty("কোনো ইউজার নেই", pad = true)
         } else {
-            act.forEach { r -> ActivityRowView(r) }
+            act.pageSlice(actPage).forEach { r -> ActivityRowView(r) }
+            PagerBar(page = actPage, total = act.size, onPage = { actPage = it })
         }
     }
 }

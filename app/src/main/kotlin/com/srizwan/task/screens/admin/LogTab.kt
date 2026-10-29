@@ -27,14 +27,13 @@ import com.srizwan.task.core.Sb
 import com.srizwan.task.core.enc
 import com.srizwan.task.core.objects
 import com.srizwan.task.core.str
-import com.srizwan.task.ui.BlockButton
+import com.srizwan.task.ui.PAGE_SIZE
+import com.srizwan.task.ui.PagerBarOpen
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-private const val PAGE = 100
-
-/** React admin/LogTab.jsx — activity log filtered by user and action, 100 rows at a time with "আরও দেখান". */
+/** React admin/LogTab.jsx — activity log filtered by user and action, 20 rows per page (server-side paging with a vector page bar). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun LogTab(vm: AdminViewModel, openKey: Int) {
@@ -43,13 +42,16 @@ fun LogTab(vm: AdminViewModel, openKey: Int) {
     var more by remember { mutableStateOf(false) }
     var err by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    // 0-based page; a new user / action filter starts again from page 1
+    var page by remember(filter.user, filter.act) { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
 
-    suspend fun fetch(offset: Int, user: String, act: String): List<JSONObject>? = try {
+    /** One page from the server: PAGE_SIZE + 1 rows are asked for, so the extra row tells whether a next page exists. */
+    suspend fun fetch(p: Int, user: String, act: String): List<JSONObject>? = try {
         Sb.get(
             "activity_log?select=*" + (if (user.isNotEmpty()) "&user_id=eq.${enc(user)}" else "") +
                 (if (act.isNotEmpty()) "&action=eq.${enc(act)}" else "") +
-                "&order=created_at.desc,id.desc&limit=$PAGE&offset=$offset"
+                "&order=created_at.desc,id.desc&limit=${PAGE_SIZE + 1}&offset=${p * PAGE_SIZE}"
         ).objects()
     } catch (e: CancellationException) { throw e } catch (e: Exception) {
         err = if (noTbl(e)) "activity_log টেবিল নেই — $SQLHINT" else e.message.orEmpty()
@@ -57,37 +59,20 @@ fun LogTab(vm: AdminViewModel, openKey: Int) {
         null
     }
 
-    // Opening the tab or changing a filter reloads from the start; a newer change cancels an older load.
-    LaunchedEffect(openKey, filter.user, filter.act) {
-        if (openKey > 0) {
-            busy = true
-            try {
-                val r = fetch(0, filter.user, filter.act)
-                if (r != null) { rows = r; more = r.size == PAGE; err = "" } else rows = emptyList()
-            } finally { busy = false }
-        }
+    suspend fun loadPage(p: Int) {
+        busy = true
+        try {
+            val r = fetch(p, filter.user, filter.act)
+            if (r != null) { rows = r.take(PAGE_SIZE); more = r.size > PAGE_SIZE; err = "" } else rows = emptyList()
+        } finally { busy = false }
     }
+
+    // Opening the tab, changing a filter or turning the page loads that page; a newer change cancels an older load.
+    LaunchedEffect(openKey, filter.user, filter.act, page) { if (openKey > 0) loadPage(page) }
 
     fun reload() {
         if (busy) return
-        scope.launch {
-            busy = true
-            try {
-                val r = fetch(0, filter.user, filter.act)
-                if (r != null) { rows = r; more = r.size == PAGE; err = "" } else rows = emptyList()
-            } finally { busy = false }
-        }
-    }
-
-    fun loadMore() {
-        if (busy) return
-        scope.launch {
-            busy = true
-            try {
-                val r = fetch(rows.size, filter.user, filter.act)
-                if (r != null) { rows = rows + r; more = r.size == PAGE; err = "" }
-            } finally { busy = false }
-        }
+        scope.launch { loadPage(page) }
     }
 
     val userOptions = listOf("" to "সব ইউজার") + vm.users.map { it.idStr() to "${it.str("full_name").orEmpty()} (${it.str("phone").orEmpty()})" }
@@ -98,7 +83,7 @@ fun LogTab(vm: AdminViewModel, openKey: Int) {
             AdminSelect(filter.user, userOptions, onPick = { vm.updateLogFilter(filter.copy(user = it)) })
             AdminSelect(filter.act, actOptions, onPick = { vm.updateLogFilter(filter.copy(act = it)) })
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Badge(Fmt.bn(rows.size) + (if (more) "+" else "") + " টি")
+                Badge("পেইজ ${Fmt.bn(page + 1)} • ${Fmt.bn(rows.size)}টি")
                 SmBtn("", "refresh") { reload() }
             }
         }
@@ -127,6 +112,6 @@ fun LogTab(vm: AdminViewModel, openKey: Int) {
                 }
             }
         }
-        if (more && err.isEmpty()) BlockButton("আরও দেখান", onClick = { loadMore() }, modifier = Modifier.padding(top = 2.dp))
+        if (err.isEmpty()) PagerBarOpen(page = page, hasNext = more, onPage = { page = it }, busy = busy)
     }
 }

@@ -60,6 +60,8 @@ import com.srizwan.task.ui.AppField
 import com.srizwan.task.ui.AppIcon
 import com.srizwan.task.ui.ErrText
 import com.srizwan.task.ui.HintText
+import com.srizwan.task.ui.PagerBar
+import com.srizwan.task.ui.pageSlice
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -181,6 +183,9 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
         else -> byNew
     }
     val shown = searched.filter { matchF(f.flt, st(it)) }.sortedWith(cmp)
+    // pagination: 20 books per page; a new search / filter / sort starts again from page 1
+    var page by remember(f.query, f.flt, f.sort) { mutableStateOf(0) }
+    val pageBooks = shown.pageSlice(page)
     val selList = shown.filter { it.idStr() in sel }
     val selCount = selList.size
 
@@ -319,7 +324,8 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
     fun doBulkRun() {
         val list = runList.filter { !it.str("pdf_url").isNullOrEmpty() }
         if (list.isEmpty()) { runErr = "সিলেক্ট করা কিতাবগুলোর কোনোটিতেই পিডিএফ লিংক নেই"; return }
-        if (ghTok(vm.S).isEmpty()) { runErr = "workflow চালাতে সেটিংস ট্যাবে GitHub Token দিন"; return }
+        val noTok = GhAccounts.withoutToken(vm.S, list)   // each book uses its own GitHub account's token
+        if (noTok.isNotEmpty()) { runErr = GhAccounts.noTokenMsgMany(vm.S, noTok); return }
         runErr = ""; bulkBusy = true; setSplitPref(runSplit)
         val split = runSplit
         AppScope.scope.launch {
@@ -397,7 +403,7 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                 SmBtn("সব ব্যর্থ আবার চেষ্টা", "play", tone = "primary") { openRunDlg(shown.filter { !it.str("pdf_url").isNullOrEmpty() }) }
             }
         }
-        HintText("${Fmt.bn(shown.size)}টি কিতাব দেখানো হচ্ছে (মোট ${Fmt.bn(books.size)}টি)", Modifier.padding(bottom = 10.dp))
+        HintText("${Fmt.bn(shown.size)}টি কিতাব মিলেছে (মোট ${Fmt.bn(books.size)}টি) • প্রতি পেইজে ${Fmt.bn(com.srizwan.task.ui.PAGE_SIZE)}টি", Modifier.padding(bottom = 10.dp))
 
         if (selMode) {
             Column(Modifier.padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -429,7 +435,7 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
         } else if (shown.isEmpty()) {
             Empty("কোনো কিতাব মেলেনি — সার্চ বা ফিল্টার বদলান", art = "search")
         } else {
-            shown.forEach { b ->
+            pageBooks.forEach { b ->
                 val id = b.idStr()
                 androidx.compose.runtime.key(id) {
                     val v = st(b)
@@ -468,9 +474,10 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                                     val noGh = b.str("github_username").isNullOrEmpty() && b.str("repo_name").isNullOrEmpty()
                                     val folder = b.str("folder")?.takeIf { it.isNotEmpty() } ?: b.str("name").orEmpty()
                                     val pagesDir = vm.S.str("pages_dir")?.takeIf { it.isNotEmpty() } ?: DEF.getValue("pages_dir")
+                                    val gr = GhAccounts.resolve(vm.S, b)   // chosen GitHub account (Default when none)
                                     Text(
-                                        (b.str("author").orEmpty()) + "\n" + eff(vm.S, b, "github_username") + "/" + eff(vm.S, b, "repo_name") +
-                                            (if (noGh) " (ডিফল্ট)" else "") + " · " + folder + "_" + pagesDir,
+                                        (b.str("author").orEmpty()) + "\n" + gr.username + "/" + gr.repo +
+                                            (if (gr.account != null) " (${gr.account.label()})" else if (noGh) " (ডিফল্ট)" else "") + " · " + folder + "_" + pagesDir,
                                         color = cs.onSurfaceVariant, fontSize = 12.5.sp, lineHeight = 18.sp
                                     )
                                     val pdf = b.str("pdf_url").orEmpty()
@@ -522,6 +529,7 @@ fun BooksTab(vm: AdminViewModel, ask: AskController, openKey: Int) {
                     }
                 }
             }
+            PagerBar(page = page, total = shown.size, onPage = { page = it })
         }
     }
 
