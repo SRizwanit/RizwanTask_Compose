@@ -23,6 +23,7 @@ import com.srizwan.task.core.ViewApiFlag
 import com.srizwan.task.core.ViewEnv
 import com.srizwan.task.core.ViewLock
 import com.srizwan.task.core.ViewToaster
+import com.srizwan.task.ui.ViewDownloadDialog
 import com.srizwan.task.ui.ViewLoadingToast
 import com.srizwan.task.ui.ViewRippleHost
 import androidx.lifecycle.repeatOnLifecycle
@@ -104,6 +105,7 @@ fun ViewScreen(bookId: String?, wantPage: String?) {
             val env = remember(c) { ViewEnv(c, toaster, apiFlag) }
             ViewPage(env, wantPage, boot)
             ViewLoadingToast(toaster)
+            ViewDownloadDialog()   // image download button: book name + page number + % (Bengali digits), goes away when done
         }
         // one instance for the whole way (book load -> page init -> first page), so the card never restarts
         ViewEntryLoading(boot, onBack = { Nav.go(Routes.TASK, replace = true) })
