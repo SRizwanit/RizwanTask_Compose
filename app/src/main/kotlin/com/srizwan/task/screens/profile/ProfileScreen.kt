@@ -236,23 +236,26 @@ fun ProfileScreen() {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
             ProfileHeader(data.myCount, isAdmin, onAdmin = { Nav.go("admin") }, onLogout = { logout() })
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.TopCenter) {
-                Column(
-                    Modifier.widthIn(max = 980.dp).fillMaxSize().verticalScroll(scroll)
-                        .padding(start = 14.dp, end = 14.dp, top = 6.dp, bottom = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(Modifier.widthIn(max = 440.dp)) {
-                        ProfileCard(
-                            data, isAdmin,
-                            onEdit = { openEdit() },
-                            onNotices = { onNoticesBtn() },
-                            onLogout = { logout() },
-                            onGuide = { Nav.go("task#guide") },
-                            onTicket = { Nav.go("support") },
-                            onWhatsApp = { whatsapp() },
-                            onPrivacy = { openUrl(ctx, PRIVACY_POLICY_URL) },
-                            onDeleteAccount = { Nav.go("deleteaccount") }
-                        )
+                // The page bar of the book list (20 per page) scrolls this column back to the top on a page change.
+                com.srizwan.task.ui.ProvidePagerScroll(scroll) {
+                    Column(
+                        Modifier.widthIn(max = 980.dp).fillMaxSize().verticalScroll(scroll)
+                            .padding(start = 14.dp, end = 14.dp, top = 6.dp, bottom = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(Modifier.widthIn(max = 440.dp)) {
+                            ProfileCard(
+                                data, isAdmin,
+                                onEdit = { openEdit() },
+                                onNotices = { onNoticesBtn() },
+                                onLogout = { logout() },
+                                onGuide = { Nav.go("task#guide") },
+                                onTicket = { Nav.go("support") },
+                                onWhatsApp = { whatsapp() },
+                                onPrivacy = { openUrl(ctx, PRIVACY_POLICY_URL) },
+                                onDeleteAccount = { Nav.go("deleteaccount") }
+                            )
+                        }
                     }
                 }
             }

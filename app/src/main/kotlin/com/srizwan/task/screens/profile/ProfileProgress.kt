@@ -12,6 +12,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -22,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import com.srizwan.task.core.Fmt
 import com.srizwan.task.core.finiteNum
 import com.srizwan.task.screens.task.TaskData
+import com.srizwan.task.ui.PagerBar
+import com.srizwan.task.ui.pageSlice
 import org.json.JSONObject
 
 /**
@@ -32,11 +38,14 @@ import org.json.JSONObject
 @Composable
 fun ProfileProgress(data: TaskData, modifier: Modifier = Modifier) {
     val cs = MaterialTheme.colorScheme
+    // pagination: 20 books per page
+    var page by remember { mutableStateOf(0) }
     val sum = data.sum ?: return
     if (sum.byBook.isEmpty()) return
+    val entries = sum.byBook.entries.toList()
     Column(modifier.fillMaxWidth()) {
         Text("আমার কাজ — কিতাব অনুযায়ী", color = cs.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
-        sum.byBook.forEach { (id, x) ->
+        entries.pageSlice(page).forEach { (id, x) ->
             val b = data.booksById[id]
             Column(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -49,6 +58,7 @@ fun ProfileProgress(data: TaskData, modifier: Modifier = Modifier) {
                 ProgLine(b, data.bookCounts[id] ?: x.n)
             }
         }
+        PagerBar(page = page, total = entries.size, onPage = { page = it })
     }
 }
 
