@@ -56,6 +56,8 @@ import com.srizwan.task.core.Net
 import com.srizwan.task.ui.CoverImage
 import com.srizwan.task.ui.glass
 import com.srizwan.task.ui.EmptyArt
+import com.srizwan.task.ui.PagerBar
+import com.srizwan.task.ui.pageSlice
 import com.srizwan.task.ui.Spinner
 import com.srizwan.task.ui.hapticClickable
 import com.srizwan.task.ui.goldColor
@@ -114,6 +116,8 @@ fun BookGrid(
     val list = books.filter { b ->
         q.isEmpty() || (b.str("name") ?: "").lowercase().contains(q) || (b.str("author") ?: "").lowercase().contains(q)
     }
+    // pagination: 20 books per page; a new search starts again from page 1
+    var page by remember(q) { mutableStateOf(0) }
     val skeleton = books.isEmpty() && status == "loading"
     val failed = books.isEmpty() && status == "error"
     val showEmpty = !skeleton && (failed || list.isEmpty())
@@ -123,7 +127,7 @@ fun BookGrid(
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val cols = maxOf(1, ((maxWidth.value + 14f) / (150f + 14f)).toInt())
         // null = a skeleton placeholder, otherwise a book
-        val cells: List<JSONObject?> = if (skeleton) List(4) { null } else if (failed) emptyList() else list
+        val cells: List<JSONObject?> = if (skeleton) List(4) { null } else if (failed) emptyList() else list.pageSlice(page)
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             cells.chunked(cols).forEach { row ->
                 Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -144,6 +148,7 @@ fun BookGrid(
             }
         }
     }
+    if (!skeleton && !failed) PagerBar(page = page, total = list.size, onPage = { page = it }, modifier = Modifier.padding(top = 10.dp))
     if (showEmpty) {
         EmptyGlassNote(
             art = if (failed) "cloud" else "search",

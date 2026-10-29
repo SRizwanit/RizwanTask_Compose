@@ -24,6 +24,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +51,8 @@ import com.srizwan.task.screens.admin.LiCard
 import com.srizwan.task.screens.admin.SegBar
 import com.srizwan.task.screens.admin.Tile
 import com.srizwan.task.ui.AppCard
+import com.srizwan.task.ui.PagerBar
+import com.srizwan.task.ui.pageSlice
 import com.srizwan.task.ui.PrimaryButton
 import com.srizwan.task.ui.errColor
 import com.srizwan.task.ui.goldColor
@@ -77,6 +82,10 @@ fun PayPane(data: TaskData, reqBusy: Boolean, onRequest: () -> Unit, onOpenPage:
     val booksById = data.booksById
     val min = minPayout(S)
     val corr = if (s != null) proofs.filter { it.str("review_status") == "correction" } else emptyList()
+    // pagination: payment history, points per book and the correction list show 20 rows per page
+    var payPage by remember { mutableStateOf(0) }
+    var bookPage by remember { mutableStateOf(0) }
+    var corrPage by remember { mutableStateOf(0) }
     val hasReq = pays.any { it.str("status") == "requested" }
     val payNumber = me?.paymentNumber
     val ok = s != null && s.available >= min && s.available > 0
@@ -140,7 +149,10 @@ fun PayPane(data: TaskData, reqBusy: Boolean, onRequest: () -> Unit, onOpenPage:
                         if (s == null) SkeletonStack(listOf(0.55f, 0.9f, 0.7f))
                         else {
                             if (pays.isEmpty()) Empty("এখনো কোনো পেমেন্ট ইতিহাস নেই", pad = true, art = "wallet")
-                            else pays.forEach { PayRow(it) }
+                            else {
+                                pays.pageSlice(payPage).forEach { PayRow(it) }
+                                PagerBar(page = payPage, total = pays.size, onPage = { payPage = it })
+                            }
                         }
                     }
                 }
@@ -162,7 +174,9 @@ fun PayPane(data: TaskData, reqBusy: Boolean, onRequest: () -> Unit, onOpenPage:
                     if (s == null) SkeletonStack(listOf(0.6f, 0.95f, 0.45f))
                     else {
                         if (s.byBook.isEmpty()) Empty("এখনো কোনো পেইজ প্রুফড করেননি", pad = true, art = "books")
-                        else s.byBook.forEach { (id, x) ->
+                        else {
+                        val byBookList = s.byBook.entries.toList()
+                        byBookList.pageSlice(bookPage).forEach { (id, x) ->
                             val b = booksById[id]
                             Column(Modifier.fillMaxWidth().kvLine().padding(vertical = 12.dp)) {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -178,6 +192,8 @@ fun PayPane(data: TaskData, reqBusy: Boolean, onRequest: () -> Unit, onOpenPage:
                                     Text("রেট ${rateTxt(data.rateOf(b))}", color = cs.onSurfaceVariant, fontSize = 12.sp)
                                 }
                             }
+                        }
+                        PagerBar(page = bookPage, total = byBookList.size, onPage = { bookPage = it })
                         }
                     }
                 }
@@ -196,7 +212,7 @@ fun PayPane(data: TaskData, reqBusy: Boolean, onRequest: () -> Unit, onOpenPage:
                         color = cs.onSurfaceVariant, fontSize = 12.sp, lineHeight = 18.sp,
                         modifier = Modifier.padding(top = 4.dp, bottom = 10.dp)
                     )
-                    corr.take(50).forEach { p ->
+                    corr.pageSlice(corrPage).forEach { p ->
                         val bid = p.opt("book_id")?.toString() ?: ""
                         val stem = p.str("stem") ?: ""
                         val b = booksById[bid]
@@ -212,7 +228,7 @@ fun PayPane(data: TaskData, reqBusy: Boolean, onRequest: () -> Unit, onOpenPage:
                             if (!note.isNullOrEmpty()) Text("অ্যাডমিন: $note", color = cs.onSurfaceVariant, fontSize = 12.5.sp, lineHeight = 20.sp)
                         }
                     }
-                    if (corr.size > 50) Text("আরও ${Fmt.bn(corr.size - 50)}টি আছে…", color = cs.onSurfaceVariant, fontSize = 12.sp)
+                    PagerBar(page = corrPage, total = corr.size, onPage = { corrPage = it })
                 }
             }
         }

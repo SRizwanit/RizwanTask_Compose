@@ -47,6 +47,10 @@ import com.srizwan.task.screens.admin.Chips
 import com.srizwan.task.ui.AppCard
 import com.srizwan.task.ui.AppIcon
 import com.srizwan.task.ui.EmptyArt
+import com.srizwan.task.ui.PAGE_SIZE
+import com.srizwan.task.ui.PagerBar
+import com.srizwan.task.ui.pageCountOf
+import com.srizwan.task.ui.pageSlice
 import com.srizwan.task.ui.Spinner
 import com.srizwan.task.ui.glass
 import com.srizwan.task.ui.goldColor
@@ -151,6 +155,8 @@ internal val PODIUM_METAL = listOf(
 fun RankPane(rank: RankState, meId: String, onPeriod: (String) -> Unit, pulling: Boolean = false) {
     val cs = MaterialTheme.colorScheme
     val d = rank.result
+    // pagination: 20 ranks per page (page 1 = places 1-20 with the podium on top); a new period starts again from page 1
+    var page by remember(rank.period) { mutableStateOf(0) }
     var myRank = ""
     if (d != null) {
         val idx = d.rows.indexOfFirst { it.id == meId }
@@ -193,15 +199,20 @@ fun RankPane(rank: RankState, meId: String, onPeriod: (String) -> Unit, pulling:
                 else {
                     val idx = d.rows.indexOfFirst { it.id == meId }
                     val bc = rank.rewards.groupingBy { it.userId }.eachCount()
-                    PodiumCard(d.rows.take(3), meId, d.names, bc)
-                    d.rows.take(20).forEachIndexed { i, r -> if (i >= 3) RankItem(r, i, meId, d.names, bc[r.id] ?: 0) }
-                    if (idx >= 20) {
-                        // gap marker: three vector dots (no text glyph)
+                    val p = page.coerceIn(0, pageCountOf(d.rows.size) - 1)
+                    val start = p * PAGE_SIZE
+                    val slice = d.rows.pageSlice(p)
+                    // the podium (places 1-3) belongs to the first page only; every other place is a normal row
+                    if (p == 0) PodiumCard(slice.take(3), meId, d.names, bc)
+                    slice.forEachIndexed { i, r -> if (p > 0 || i >= 3) RankItem(r, start + i, meId, d.names, bc[r.id] ?: 0) }
+                    if (idx >= 0 && (idx < start || idx >= start + slice.size)) {
+                        // my own place is outside this page: gap marker (three vector dots, no text glyph) + my row
                         Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             repeat(3) { Box(Modifier.size(3.dp).background(cs.onSurfaceVariant, CircleShape)) }
                         }
                         RankItem(d.rows[idx], idx, meId, d.names, bc[d.rows[idx].id] ?: 0)
                     }
+                    PagerBar(page = p, total = d.rows.size, onPage = { page = it })
                 }
             }
         }

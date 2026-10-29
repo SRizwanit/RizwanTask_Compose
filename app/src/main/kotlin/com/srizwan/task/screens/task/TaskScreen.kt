@@ -366,27 +366,30 @@ fun TaskScreen() {
                     )
                 }
             ) {
-                Column(
-                    Modifier.widthIn(max = 980.dp).fillMaxSize()
-                        .verticalScroll(scroll)
-                        .padding(start = 14.dp, end = 14.dp, bottom = 90.dp)
-                ) {
-                    when (tab) {
-                        "pay" -> PayPane(
-                            data, reqBusy, onRequest = { onRequest() },
-                            onOpenPage = { bid, stem -> Nav.go("view?book=${enc(bid)}&page=${enc(stem)}") }
-                        )
-                        "rank" -> RankPane(
-                            rank, meId = me?.id ?: "",
-                            onPeriod = { k -> rank.pick(k); scope.launch { rank.load(k) } },
-                            pulling = pulling
-                        )
-                        else -> TaskPane(
-                            data, resume, query, onQuery = { query = it },
-                            onReload = { scope.launch { data.load() }; scope.launch { data.loadCount() }; scope.launch { data.loadNotices() } },
-                            onGoal = { openGoal() }, onResume = { openResume() }, onOpen = { openBook(it) },
-                            pulling = pulling
-                        )
+                // The page bars (20 rows per page) scroll this column back to the top when the page changes.
+                com.srizwan.task.ui.ProvidePagerScroll(scroll) {
+                    Column(
+                        Modifier.widthIn(max = 980.dp).fillMaxSize()
+                            .verticalScroll(scroll)
+                            .padding(start = 14.dp, end = 14.dp, bottom = 90.dp)
+                    ) {
+                        when (tab) {
+                            "pay" -> PayPane(
+                                data, reqBusy, onRequest = { onRequest() },
+                                onOpenPage = { bid, stem -> Nav.go("view?book=${enc(bid)}&page=${enc(stem)}") }
+                            )
+                            "rank" -> RankPane(
+                                rank, meId = me?.id ?: "",
+                                onPeriod = { k -> rank.pick(k); scope.launch { rank.load(k) } },
+                                pulling = pulling
+                            )
+                            else -> TaskPane(
+                                data, resume, query, onQuery = { query = it },
+                                onReload = { scope.launch { data.load() }; scope.launch { data.loadCount() }; scope.launch { data.loadNotices() } },
+                                onGoal = { openGoal() }, onResume = { openResume() }, onOpen = { openBook(it) },
+                                pulling = pulling
+                            )
+                        }
                     }
                 }
             }
